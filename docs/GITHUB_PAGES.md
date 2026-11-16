@@ -13,3 +13,5 @@ GitHub Pages HTTPS is a separate setting. Verify certificate issuance and an act
 Publication outcome: GitHub Pages deployed successfully. `https://meetbuddy.me/` validates its certificate and returns HTTP 200 with the Buddy landing page. HTTPS enforcement is enabled and HTTP redirects to HTTPS. Certificate expires 14 February 2027. The `www` alias still needs its Namecheap CNAME changed from `meetbuddy.me` to `ilinii.github.io` before GitHub can provision its additional certificate; do not claim HTTPS for that alias yet.
 
 The same browser smoke checks also passed against the live HTTPS origin at 1440/390/320 px, including the browser note editor and no console/network errors.
+
+The public voice demo uses an optional bounded external gateway. Set BUDDY_VOICE_GATEWAY to its HTTPS origin before website:build; the build keeps the microphone trial and accurate quota/privacy notice. Without that variable it still emits the static-only version. See PUBLIC_VOICE_DEMO.md and website/voice-demo/README.md.

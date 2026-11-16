@@ -1,5 +1,5 @@
-import {setupVoiceDemo} from './voice.js?v=voice-1';
-import {createHands} from './hands.js?v=setup-3';
+import {setupVoiceDemo} from './voice.js?v=voice-public-2';
+import {createHands} from './hands.js?v=open-fingers-1';
 
 const preference=matchMedia('(prefers-reduced-motion: reduce)');
 let paused=preference.matches;

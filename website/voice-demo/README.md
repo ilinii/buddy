@@ -1,0 +1,11 @@
+# Bounded public voice demo
+
+The static meetbuddy.me site uses a separate Cloudflare Worker hosted through Sites. The existing owner-private Site is unchanged. The gateway stores `DEEPGRAM_DEMO_KEY` and `VOICE_IP_SALT` as runtime secrets; neither belongs in source or Pages output. `VOICE_DEMO_ENABLED=false` is the kill switch.
+
+Microphone capture starts only after a click and permission. The website requests a 60-second, one-use bearer ticket. An atomic D1/SQLite insertion reserves a maximum of 20 starts per UTC day, three per daily keyed network hash, and 100 lifetime. Failed provider handshakes count too. Each connection allows 45 seconds / 1,440,000 PCM bytes, bounded frames/buffers, and at most seven seconds to drain final words. There is no quota-reset endpoint. Origin checks and CORS allow only the two Buddy website origins; they complement the durable cap and are not authentication or bot detection. Shared networks can share a quota. A determined attacker can exhaust this small demo allowance; spending remains capped by the same lifetime ledger.
+
+No audio or transcript content is written to storage or application logs. Up to 100 quota rows retain random session IDs, daily HMAC network hashes, UTC dates/timestamps and a used flag. Raw IP addresses are not persisted by the application. Hosting/speech providers still process transport metadata and audio; the Deepgram request sets `mip_opt_out=true`. This is cloud processing, not end-to-end encryption.
+
+Run `node --test website/voice-demo/worker/*.test.mjs` from the application checkout. These tests exercise the actual quota SQL in SQLite and the relay protocol with a simulated upstream. `node website/voice-demo/build.mjs` emits the Worker. A deployment-only checkout supplies its own private `.openai/hosting.json` with `d1: "DB"`, plus these Drizzle schema migrations. Sites applies the migration and binds D1. Never create the table during a request or copy a hosting identity/secret into this public source.
+
+Build the frontend with `BUDDY_VOICE_GATEWAY` set to the HTTPS gateway origin and `npm run website:build`. Without that value, the static build omits the live demo. Publish only generated public files to Pages, preserving CNAME and .nojekyll. The owner explicitly approved bounded public usage on 16 November 2026. No billing or paid plan was enabled.

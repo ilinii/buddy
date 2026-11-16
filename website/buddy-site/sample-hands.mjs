@@ -1,7 +1,7 @@
 // Compile the generated image into an alpha/luminance field for the ASCII renderer.
 import {readFile,writeFile} from 'node:fs/promises';
 import {chromium} from '@playwright/test';
-const png=await readFile(new URL('assets/creation-hands-master.png',import.meta.url));
+const png=await readFile(new URL('assets/creation-hands-open-fingers.png',import.meta.url));
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe'});
 try{
   const page=await browser.newPage();
