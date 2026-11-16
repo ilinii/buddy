@@ -9,3 +9,7 @@ The static build omits the cloud voice trial and its scripts, adjusts the privac
 16 November 2026 verification before publication: TypeScript, 62 unit tests, app/static builds, publication guard and Gitleaks directory scan passed. Browser checks at 1440, 390 and 320 px passed: ASCII render, no horizontal overflow, workflow/setup controls, mobile navigation, accurate privacy page, working note editor and no console/network failures. Browser capture is not physical-device/native transcription acceptance.
 
 GitHub Pages HTTPS is a separate setting. Verify certificate issuance and an actual HTTPS response before enabling HTTPS enforcement. Certificate provisioning can be restarted by removing and restoring the same custom domain if it becomes stuck; retain the domain in source. Never bypass browser certificate warnings as a deployment check.
+
+Publication outcome: GitHub Pages deployed successfully. `https://meetbuddy.me/` validates its certificate and returns HTTP 200 with the Buddy landing page. HTTPS enforcement is enabled and HTTP redirects to HTTPS. Certificate expires 14 February 2027. The `www` alias still needs its Namecheap CNAME changed from `meetbuddy.me` to `ilinii.github.io` before GitHub can provision its additional certificate; do not claim HTTPS for that alias yet.
+
+The same browser smoke checks also passed against the live HTTPS origin at 1440/390/320 px, including the browser note editor and no console/network errors.
