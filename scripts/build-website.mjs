@@ -17,8 +17,7 @@ if(gateway){
  if(url.protocol!=='https:'||url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw Error('BUDDY_VOICE_GATEWAY must be an HTTPS origin');
  html=html.replace('id="voice-demo"','id="voice-demo" data-gateway="'+url.origin+'"');
 }else{
- html=html.replace(/<section class="voice-demo wrap"[\s\S]*?<\/section>/,'');
- html=html.replace('href="#voice-demo">Try your voice','href="/app/?demo=home">Try Buddy');
+ html=html.replace(/<!-- live demo:start -->[\s\S]*?<!-- live demo:end -->/,'');
 }
 await writeFile(join(output,'index.html'),html);await writeFile(join(output,'.nojekyll'),'');
 // Pages serves static files; optional live speech uses a separate bounded gateway.

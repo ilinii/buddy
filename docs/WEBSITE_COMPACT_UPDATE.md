@@ -1,0 +1,13 @@
+# Compact public website — 16 November 2026
+
+The owner's requested edit replaces the static opening meeting preview and separate voice section with the actual transcription trial inside the centered hero. Only Explore Buddy remains as the hero link. The separate workspace and context sections become one keyboard-accessible Record / Review / Ask walkthrough, retaining sample questions and source dialogs. The long closing block is removed and FAQ shortened.
+
+Homepage copy uses the technically correct speech-to-text term; the owner-requested state-of-the-art wording is marketing copy, not a new benchmark claim. The inline privacy sentence is only No audio or transcript is saved by this demo; full provider, quota and privacy details remain linked in the privacy document. The existing gateway, credential, caps and model are unchanged.
+
+The default setup tab is Buddy handles it, with the owner-proposed Starting at $8.90 / month. A Coming soon status is deliberately retained because subscriptions, billing and Buddy-managed SaaS accounts are not implemented. The Your API keys tab is second. The previous long cloud-permissions paragraph is removed from this marketing section, not from actual app consent or the privacy policy.
+
+Verification: TypeScript, 62 application unit tests and app/static production build passed. Reusable six-width browser QA passed at 1440, 1024, 820, 768, 390 and 320 px: hero/demo/navigation/workspace centering, merged walkthrough, sample questions/citations, source dialogs, pricing/default tab/keyboard order, mobile menu, reduced motion and no overflow/page/network errors. Heights were 2681 px at 1440, 2671 px at intermediate widths, 2983 px at 390 and 2997 px at 320, approximately half the prior long page. Desktop/phone screenshots were visually inspected.
+
+The fake-device voice workflow passed at 1440/390/320: explicit start, actual synthetic microphone PCM, provisional/final text, Stop/drain, anonymous voice estimates and readable quota errors. It used a simulated provider and did not consume live credits. No new physical microphone, Safari/iPhone or native-device acceptance is claimed. The unconfigured static build omits the live trial and voice scripts; the configured build restores the gateway correctly.
+
+GATE: OPEN 39 after three review rounds, with three specific exceptions for the retained user headline and verified custom motion/entrance. Strong keyboard-focus outlines and nonanimated keyboard scrolling fixed the reported focus-visibility issues. Full findings and exceptions: WEBSITE_DESIGN_AUDIT.md. The compact design does not claim a full style-gate pass.
