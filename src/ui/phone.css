@@ -1,0 +1,127 @@
+/* iPhone workspace: safe-area aware, touch first, with the same neutral glass material. */
+.phone-navigation { display:none; }
+@media (max-width:760px), (max-width:980px) and (pointer:coarse) {
+  html,body,#root { height:100%; overflow:hidden; }
+  .browser-window,.app-shell { height:var(--phone-height,100dvh); }
+  .app-shell { padding:0; background:#f6f5f2; }
+  .main-shell { margin:0; width:100%; border:0; border-radius:0; background:transparent; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+  .glass-rail,.sidebar-scrim,.mobile-menu { display:none!important; }
+  .topbar { height:auto; min-height:calc(64px + env(safe-area-inset-top)); padding:calc(8px + env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 8px max(20px,env(safe-area-inset-left)); }
+  .breadcrumb { gap:9px; }
+  .breadcrumb .topbar-wordmark { display:inline; font-size:23px; font-weight:600; letter-spacing:-1px; }
+  .breadcrumb .topbar-slash,.breadcrumb>strong,.topbar-right>.icon-button:last-child { display:none; }
+  .topbar-right { gap:2px; }
+  .topbar-right .icon-button,.focus-control { width:44px; height:44px; min-width:44px; padding:0; justify-content:center; }
+  .focus-control span { display:none; }
+  .main-content { overscroll-behavior-y:contain; scroll-padding-bottom:24px; }
+  .phone-navigation { display:flex; flex-shrink:0; gap:4px; margin:8px max(14px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left)); padding:6px; border:1px solid #ffffffef; border-radius:25px; background:#ffffffe0; box-shadow:0 8px 28px -16px #24242442,inset 0 1px #fff; backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); z-index:35; }
+  .phone-navigation button { flex:1; position:relative; min-width:0; min-height:54px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#787876; font-size:10px; font-weight:500; border-radius:19px; }
+  .phone-navigation button[aria-current=page] { color:#292927; }
+  .phone-navigation button>svg,.phone-navigation button>span:not(.phone-nav-selection) { position:relative; z-index:1; }
+  .phone-nav-selection { position:absolute; inset:0; border-radius:19px; background:#eeede9; box-shadow:inset 0 1px 1px #00000004; }
+  html[data-keyboard=true] .phone-navigation { display:none; }
+  .matrix-home.workspace-home { padding:0 max(22px,env(safe-area-inset-right)) 24px max(22px,env(safe-area-inset-left)); max-width:600px; }
+  .matrix-home .meeting-library-heading { padding:20px 0 24px; gap:24px; }
+  .library-title-group { justify-content:space-between; flex-direction:row-reverse; width:100%; }
+  .matrix-home .meeting-library-heading h1 { font-size:34px; font-weight:570; letter-spacing:-1.4px; }
+  .library-title-group .capture-presence { width:53px; height:53px; }
+  .library-title-group .matrix-cube { max-width:64px; max-height:64px; }
+  .capture-toolbar { width:100%; align-items:stretch; }
+  .capture-toolbar .library-capture-actions { gap:10px; }
+  .matrix-home .capture-toolbar .library-capture-actions>button { min-height:50px; border-radius:17px; font-size:13px; padding:12px; }
+  .capture-toolbar .capture-capability { font-size:10px; line-height:1.7; text-align:left; padding-left:2px; }
+  .collection-tools { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:22px; }
+  .conversation-search { order:-1; width:100%; max-width:none; min-width:0; border-radius:16px; min-height:48px; background:#eeede9a0; border:1px solid #e5e4df; }
+  .matrix-home .conversation-search input { font-size:16px; }
+  .meeting-filters { gap:6px; }
+  .meeting-filters button { min-height:44px; padding:10px 13px; font-size:11px; }
+  .collection-total { margin-left:auto; font-size:11px; }
+  .indexed-meetings { display:block; }
+  .meeting-hook { display:none; }
+  .meeting-month-group>h2 { font-size:11px; letter-spacing:.04em; color:#767671; margin:4px 0 12px; }
+  .matrix-home .meeting-row.glass-meeting { border:1px solid #e9e8e3; border-radius:20px; padding:19px; gap:12px; background:linear-gradient(145deg,#fffffff2,#ffffffa6); box-shadow:0 4px 16px -13px #2223,inset 0 1px #fff; }
+  .matrix-home .glass-meeting .meeting-info>strong { font-size:17px; line-height:1.3; letter-spacing:-.4px; }
+  .matrix-home .glass-meeting .meeting-info>.meeting-excerpt { font-size:12px; line-height:1.65; -webkit-line-clamp:2; white-space:normal; }
+  .glass-meeting-meta,.glass-meeting-footer { font-size:10px; }
+  .collection-footer { flex-wrap:wrap; gap:12px; padding-top:20px; }
+  .collection-footer button { min-height:44px; font-size:10px; }
+  .icon-button { width:44px; height:44px; min-width:44px; }
+  input:not([type=checkbox]),textarea,select { font-size:16px; }
+  .collection { padding:25px 22px; }
+  .collection>h1,.knowledge-heading h1 { font-size:32px; margin-top:0; }
+  .collection-intro { font-size:13px; margin-bottom:22px; }
+  .collection-row { gap:12px; flex-wrap:wrap; }
+  .collection-title { font-size:15px; }
+  .collection-row p { font-size:13px; }
+  .collection-row>.badge { margin-left:32px; }
+  .knowledge-heading { gap:8px; }
+  .knowledge-symbol { display:none; }
+  .knowledge-actions { gap:10px; flex-wrap:wrap; }
+  .knowledge-actions .button { min-height:46px; }
+  .desktop-folder-import { display:none; }
+  .meeting-layout { height:100%; min-height:0; display:flex; position:relative; }
+  .document-column { width:100%; min-width:0; }
+  .meeting-toolbar { min-height:66px; padding:0 12px 12px; gap:0; position:relative; }
+  .meeting-toolbar>div { gap:0; }
+  .meeting-toolbar .save-indicator { display:flex; position:absolute; top:47px; left:22px; font-size:10px; gap:4px; }
+  .meeting-toolbar .back-link { min-height:44px; font-size:12px; white-space:nowrap; }
+  .meeting-toolbar .copy-action { min-width:40px; }
+  .document-heading,.notes-canvas .document-heading { padding:24px 22px 0; }
+  .meeting-title,.notes-canvas .meeting-title { font-size:30px; line-height:1.25; letter-spacing:-1px; }
+  .meeting-meta,.notes-canvas .meeting-meta { gap:10px; flex-wrap:wrap; font-size:10px; }
+  .document-body,.notes-canvas .document-body { padding:24px 22px 45px; }
+  .minimal-note .note-editor,.note-editor { font-size:16px; line-height:1.8; }
+  .note-page-actions { padding-top:20px; }
+  .note-page-actions .note-record-entry { min-height:46px; border-radius:15px; font-size:12px; }
+  .document-tabs { gap:4px; overflow-x:auto; }
+  .document-tabs>button { min-height:46px; white-space:nowrap; font-size:12px; }
+  .document-tabs .meeting-status { font-size:9px; }
+  .note-recording-setup { width:calc(100% - 32px); }
+  .recording-studio { margin-left:16px; margin-right:16px; }
+  .recording-controls button { min-width:44px; min-height:44px; }
+  .live-excerpt-content { max-height:150px; overflow:auto; }
+  .live-excerpt-text { font-size:15px; }
+  .assistant-panel { position:absolute!important; inset:0; width:100%!important; min-width:0; max-width:none!important; height:100%; z-index:40; resize:none; border:0; border-radius:22px 22px 0 0; }
+  .assistant-compose { padding-bottom:max(16px,env(safe-area-inset-bottom)); }
+  .modal-backdrop { bottom:auto; height:var(--phone-height,100dvh); padding:calc(12px + env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom)); align-items:flex-end; }
+  .modal { width:100%; max-height:calc(var(--phone-height,100dvh) - env(safe-area-inset-top) - 24px); border-radius:25px; }
+  .modal>header { padding:13px 18px; }
+  .modal>header h2 { font-size:18px; }
+  .modal-body,.new-meeting-form { padding:20px; }
+  .new-meeting-form { overflow:auto; }
+  .new-meeting-form .mode-options button { min-height:60px; }
+  .settings-layout { display:flex; flex-direction:column; min-height:0; }
+  .settings-layout>nav { flex-direction:row; overflow-x:auto; padding:8px 12px; flex-shrink:0; border:0; }
+  .settings-layout>nav button { flex:1; white-space:nowrap; min-height:44px; font-size:11px; padding:8px; justify-content:center; }
+  .settings-layout>nav button>svg { display:none; }
+  .settings-content { padding:18px 20px; overflow:auto; }
+  .field-help { font-size:11px; line-height:1.7; }
+  .spotlight-navigator { margin-bottom:0!important; max-height:calc(var(--phone-height,100dvh) - 24px); border-radius:0!important; }
+  .spotlight-navigator .navigator-composer { border-radius:20px; padding:10px 12px 10px 18px; }
+  .spotlight-navigator .navigator-composer textarea { font-size:16px; }
+  .spotlight-navigator .spotlight-chip,.spotlight-navigator .spotlight-close { min-height:44px; }
+  .welcome-entry { min-height:100%; height:var(--phone-height,100dvh); overflow:auto; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+  .welcome-header { padding:20px 24px; }
+  .welcome-header>span { display:none; }
+  .welcome-composition { padding:18px 24px 32px; gap:26px; }
+  .welcome-copy h1 { font-size:44px; line-height:1.04; letter-spacing:-2px; }
+  .welcome-copy>p { font-size:14px; }
+  .welcome-product { min-height:0; }
+  .welcome-preview-body { padding-top:12px; padding-bottom:15px; }
+  .welcome-footer { padding:10px 24px 20px; }
+  html:root[data-theme=dark] .app-shell { background:#141413; }
+  html:root[data-theme=dark] .phone-navigation { background:#242423e6; border-color:#363635; box-shadow:inset 0 1px #ffffff0b; }
+  html:root[data-theme=dark] .phone-navigation button { color:#a1a19a; }
+  html:root[data-theme=dark] .phone-navigation button[aria-current=page] { color:#f2f1ed; }
+  html:root[data-theme=dark] .phone-nav-selection { background:#3b3b37; }
+  html:root[data-theme=dark] .conversation-search { background:#222221; border-color:#373734; }
+  html:root[data-theme=dark] .matrix-home .meeting-row.glass-meeting { background:linear-gradient(145deg,#292928eb,#20201fe0); border-color:#3a3a36; }
+  html:root[data-theme=dark] .matrix-home .glass-meeting .meeting-info>.meeting-excerpt { color:#b5b5ae; }
+  html:root[data-theme=dark] .assistant-panel { background:#191918f5; }
+}
+@media (max-width:360px) {
+  .meeting-toolbar { padding-left:8px; padding-right:5px; }
+  .meeting-toolbar .icon-button { min-width:36px; width:36px; }
+  .capture-toolbar .library-capture-actions>button { font-size:12px; gap:6px; }
+  .phone-navigation { margin-left:10px; margin-right:10px; }
+}

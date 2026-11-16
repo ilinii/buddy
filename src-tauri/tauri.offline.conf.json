@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "resources": {
+      "resources/engine/whisper-base.bin": "models/whisper-base.bin",
+      "resources/engine/model.json": "models/model.json",
+      "../public/third-party/whisper-weights-MIT-LICENSE.txt": "licenses/Whisper-MIT.txt",
+      "../public/third-party/whisper.cpp-LICENSE.txt": "licenses/whisper-cpp-MIT.txt"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "languages": [
+          "English"
+        ],
+        "installerHooks": "installer-hooks.nsh"
+      },
+      "allowDowngrades": false
+    }
+  }
+}

@@ -1,0 +1,15 @@
+# Generate bindings for the host ABI; bundled whisper-rs bindings are not Windows-safe.
+# native-env.ps1 discovers the workspace-local libclang on Windows.
+[env]
+# Baseline CPU build: avoid shipping host-specific AVX instructions to older PCs.
+GGML_NATIVE = "OFF"
+GGML_SSE42 = "OFF"
+GGML_AVX = "OFF"
+GGML_AVX2 = "OFF"
+GGML_BMI2 = "OFF"
+GGML_FMA = "OFF"
+GGML_F16C = "OFF"
+
+# Ship the Windows C++ runtime inside the executable, not as an end-user prerequisite.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

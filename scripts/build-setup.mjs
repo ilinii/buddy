@@ -1,0 +1,32 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {nsisAppHash} from './installer-integrity.mjs';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const run=(file,args)=>new Promise((resolve,reject)=>{const child=spawn(file,args,{stdio:'inherit',windowsHide:true});child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(new Error(`Setup compiler exited with ${code}`)));});
+const hash=async file=>crypto.createHash('sha256').update(await fs.readFile(file)).digest('hex');
+export async function buildSetup(target,artifactSuffix=''){
+ if(process.platform!=='win32')throw new Error('Windows setup must be built on Windows');
+ if(target&&!target.startsWith('x86_64-'))throw new Error('This setup build currently supports Windows x64 only');
+ if(artifactSuffix&&!/^[a-z0-9-]+$/.test(artifactSuffix))throw new Error('Invalid setup artifact suffix');
+ const release=path.join(root,'src-tauri/target',...(target?[target]:[]),'release');
+ const bundle=path.join(release,'bundle/nsis');
+ const config=JSON.parse(await fs.readFile(path.join(root,'src-tauri/tauri.conf.json'),'utf8'));
+ const version=config.version;
+ const payload=path.join(bundle,`${config.productName}_${version}_x64-setup.exe`),app=path.join(release,'buddy.exe');
+ await fs.access(payload);
+ const work=path.join(root,'output/installer-build');await fs.mkdir(work,{recursive:true});
+ const destination=path.join(release,'bundle/setup');await fs.mkdir(destination,{recursive:true});
+ const output=path.join(destination,`Buddy-${version}-Windows-Setup${artifactSuffix?`-${artifactSuffix}`:''}.exe`);
+ const installedAppSHA256=nsisAppHash(await fs.readFile(app));
+ const constants=path.join(work,'Build.cs');await fs.writeFile(constants,`[assembly:System.Reflection.AssemblyTitle("Buddy Setup")] [assembly:System.Reflection.AssemblyProduct("Buddy")] [assembly:System.Reflection.AssemblyFileVersion("${version.split('-')[0]}.0")] namespace BuddySetup { static class Build { public const string PayloadHash="${await hash(payload)}";public const string AppHash="${installedAppSHA256}"; } }`);
+ const framework=path.join(process.env.WINDIR||'C:/Windows','Microsoft.NET/Framework64/v4.0.30319');
+ const references=['System.dll','System.Core.dll','System.Xaml.dll','WPF/WindowsBase.dll','WPF/PresentationCore.dll','WPF/PresentationFramework.dll'];
+ await run(path.join(framework,'csc.exe'),['/nologo','/target:winexe','/platform:x64','/optimize+','/codepage:65001',`/out:${output}`,`/win32icon:${path.join(root,'src-tauri/icons/icon.ico')}`,`/win32manifest:${path.join(root,'installer/windows/app.manifest')}`,...references.map(ref=>`/reference:${path.join(framework,ref)}`),`/resource:${payload},Buddy.SetupPayload`,`/resource:${path.join(root,'installer/windows/Setup.xaml')},Buddy.SetupUI`,`/resource:${path.join(root,'public/brand/keepsake-mark.png')},Buddy.KeepsakeMark`,path.join(root,'installer/windows/Setup.cs'),path.join(root,'installer/windows/Setup.Preview.cs'),path.join(root,'installer/windows/FractalGlass.cs'),constants]);
+ const report={version,output,payload,payloadSHA256:await hash(payload),looseAppSHA256:await hash(app),installedAppSHA256,setupSHA256:await hash(output),bytes:(await fs.stat(output)).size,installed:false};
+ await fs.writeFile(path.join(destination,'build.json'),JSON.stringify(report,null,2));
+ console.log(`Built modern Buddy setup: ${output}`);return report;
+}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))buildSetup(process.argv[2]).catch(error=>{console.error(error.message);process.exitCode=1;});

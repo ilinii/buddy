@@ -1,0 +1,55 @@
+name: Verify Buddy
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  shared-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+        env:
+          BUDDY_PLAYWRIGHT_BUNDLED: '1'
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm run build
+      - name: Apple SDK and speech build prerequisites
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install llvm cmake
+          echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "$GITHUB_ENV"
+          echo "BINDGEN_EXTRA_CLANG_ARGS=-isysroot $(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> "$GITHUB_ENV"
+      - run: cargo check --manifest-path src-tauri/Cargo.toml
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - run: npm run tauri -- build --no-bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buddy-${{ matrix.os }}-unsigned
+          path: |
+            src-tauri/target/release/buddy.exe
+            src-tauri/target/release/buddy

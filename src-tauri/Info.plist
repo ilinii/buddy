@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>NSMicrophoneUsageDescription</key><string>Buddy records your microphone for meeting audio and transcription only after you start recording.</string>
+<key>NSScreenCaptureUsageDescription</key><string>Buddy uses ScreenCaptureKit to record meeting audio from other apps. Buddy does not capture or save screen images.</string>
+<key>NSAudioCaptureUsageDescription</key><string>Buddy records meeting audio from other apps only when you enable computer audio and start recording.</string>
+</dict></plist>

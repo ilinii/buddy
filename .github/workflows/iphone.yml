@@ -1,0 +1,25 @@
+name: iPhone SDK check
+on: workflow_dispatch
+jobs:
+  simulator-source-check:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: brew install cmake llvm
+      - name: libclang for native speech bindings
+        run: echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run ios:check
+      # This checks Rust/Objective-C against Apple's SDK. No signing, IPA,
+      # simulator launch, physical microphone or lock-screen claim is implied.

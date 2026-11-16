@@ -1,0 +1,15 @@
+PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
+INSERT OR IGNORE INTO schema_migrations VALUES(1, datetime('now'));
+CREATE TABLE IF NOT EXISTS settings(id INTEGER PRIMARY KEY CHECK(id=1), json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS meetings(id TEXT PRIMARY KEY, title TEXT NOT NULL, date TEXT NOT NULL, json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS transcript_segments(id TEXT NOT NULL, meeting_id TEXT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE, start REAL NOT NULL, end REAL NOT NULL, text TEXT NOT NULL, final INTEGER NOT NULL, PRIMARY KEY(meeting_id,id));
+CREATE TABLE IF NOT EXISTS meeting_events(id TEXT NOT NULL, meeting_id TEXT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE, type TEXT NOT NULL, json TEXT NOT NULL, PRIMARY KEY(meeting_id,id));
+CREATE TABLE IF NOT EXISTS note_blocks(id TEXT NOT NULL, meeting_id TEXT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE, revision INTEGER NOT NULL, edited_by TEXT NOT NULL, json TEXT NOT NULL, PRIMARY KEY(meeting_id,id));
+CREATE TABLE IF NOT EXISTS event_relationships(meeting_id TEXT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE, from_id TEXT NOT NULL, to_id TEXT NOT NULL, relationship TEXT NOT NULL, PRIMARY KEY(meeting_id,from_id,to_id));
+CREATE TABLE IF NOT EXISTS action_items(event_id TEXT NOT NULL, meeting_id TEXT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE, owner TEXT, due TEXT, done INTEGER NOT NULL, PRIMARY KEY(meeting_id,event_id));
+CREATE TABLE IF NOT EXISTS source_references(event_id TEXT NOT NULL, meeting_id TEXT NOT NULL REFERENCES meetings(id) ON DELETE CASCADE, segment_id TEXT NOT NULL, PRIMARY KEY(meeting_id,event_id,segment_id));
+CREATE TABLE IF NOT EXISTS ai_tasks(id TEXT PRIMARY KEY, meeting_id TEXT REFERENCES meetings(id) ON DELETE CASCADE, state TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY, name TEXT NOT NULL, group_name TEXT NOT NULL, json TEXT NOT NULL);
+CREATE VIRTUAL TABLE IF NOT EXISTS document_chunks USING fts5(id UNINDEXED, document_id UNINDEXED, name, location UNINDEXED, text, group_name UNINDEXED, demo UNINDEXED, tokenize='unicode61 remove_diacritics 2');
+CREATE INDEX IF NOT EXISTS meetings_date ON meetings(date DESC);

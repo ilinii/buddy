@@ -1,0 +1,188 @@
+/* Neutral glass workspace. Window chrome shares the app's material and scale. */
+:root {
+  --glass-edge: #ffffffed;
+  --glass-surface: linear-gradient(135deg, #ffffffc9, #ffffff6e);
+  --glass-row: linear-gradient(120deg, #ffffffeb, #ffffffa3);
+  --glass-shadow: 0 6px 24px -18px #23232335, inset 0 1px 0 #fff;
+}
+.desktop-window, .browser-window { height: 100dvh; position: relative; isolation: isolate; }
+.app-shell { background: linear-gradient(145deg, #ededea, #f4f4f2 48%, #eaeae8); }
+.main-shell {
+  margin: 8px 8px 8px 0; border-radius: 20px;
+  border: 1px solid var(--glass-edge); background: var(--glass-surface);
+  backdrop-filter: blur(26px); -webkit-backdrop-filter: blur(26px);
+  box-shadow: 0 12px 40px -30px #20202040, inset 0 1px 0 #fff;
+}
+.topbar { height: 58px; min-height: 58px; padding: 0 28px; background: transparent; border: 0; }
+.topbar-wordmark { font-size: 18px; letter-spacing: -.7px; }
+.topbar-right { gap: 10px; }
+.topbar-right .icon-button { width: 32px; height: 32px; border-radius: 50%; }
+.breadcrumb strong { color: #686b6e; }
+.focus-control { border-radius: 20px; }
+.desktop-window .topbar-right { padding-right: 140px; }
+.window-drag-strip { position: absolute; z-index: 61; top: 0; left: 0; right: 156px; height: 17px; user-select: none; }
+.window-controls {
+  display: flex; position: absolute; z-index: 80; right: 16px; top: 20px;
+  padding-left: 7px; border-left: 1px solid #33333312; gap: 2px;
+}
+.window-controls button {
+  width: 36px; height: 30px; border-radius: 8px; color: #6a6a6a;
+  display: grid; place-items: center; transition: background 140ms, color 140ms;
+}
+.window-controls button:active { transform: none; background: #20202014; }
+.window-controls button:focus-visible { outline: 2px solid #777; outline-offset: -3px; }
+@media (hover: hover) and (pointer: fine) {
+  .window-controls button:hover { background: #2020200c; color: #202020; }
+  .window-controls .window-close:hover { background: #b83f3d; color: #fff; }
+}
+.desktop-window[data-window-focused=false] .window-controls { opacity: .65; }
+.desktop-window[data-maximized=true] .main-shell { border-radius: 12px; }
+.window-control-error:empty { display: none; }
+.window-control-error { position: absolute; z-index: 100; right: 20px; top: 58px; max-width: 320px; padding: 12px; border-radius: 12px; background: var(--paper); box-shadow: var(--shadow); font-size: 11px; }
+.desktop-window .welcome-header { padding-right: 142px; }
+.desktop-window .welcome-header, .desktop-window .topbar { user-select: none; }
+.sidebar.glass-rail { width: 76px; min-width: 76px; padding: 18px 8px; }
+.rail-dock { padding: 7px 5px; gap: 9px; border-radius: 19px; background: var(--glass-surface); border-color: var(--glass-edge); box-shadow: var(--glass-shadow); }
+.glass-rail .main-nav { gap: 5px; }
+.glass-rail .main-nav > button, .rail-new, .rail-settings { width: 40px; height: 40px; min-height: 40px; border-radius: 12px; }
+.glass-rail .main-nav > button.active { background: #ffffff70; border-color: #ffffffd9; box-shadow: 0 2px 7px -4px #3333; }
+.rail-settings { margin-top: 4px; }
+.matrix-home.workspace-home { max-width: 1160px; padding: 0 32px 28px; min-height: 0; }
+.matrix-home .meeting-library-heading { padding: 20px 0 27px; gap: 20px; }
+.library-title-group { gap: 9px; }
+.matrix-home .meeting-library-heading h1 { font-size: 29px; letter-spacing: -1px; font-weight: 530; }
+.matrix-home .capture-presence .presence-hero { width: 57px; height: 57px; }
+.capture-toolbar { gap: 7px; }
+.capture-toolbar .library-capture-actions .liquid-record,
+.capture-toolbar .library-capture-actions .button { min-height: 40px; border-radius: 14px; font-size: 12px; padding: 10px 15px; }
+.capture-toolbar .library-capture-actions .liquid-record { box-shadow: inset 0 1px 0 #ffffff35, 0 4px 9px -6px #1118; }
+.capture-toolbar .library-capture-actions .button.secondary {
+  background: var(--glass-surface); border-color: var(--glass-edge);
+  box-shadow: var(--glass-shadow); backdrop-filter: blur(18px); color: #575b60;
+}
+.capture-toolbar .capture-capability { font-size: 9px; color: #75797d; }
+.collection-tools { gap: 12px; margin-bottom: 22px; }
+.matrix-home .meeting-filters { padding: 4px; gap: 2px; border-radius: 14px; border: 1px solid #fff; background: #ffffff50; box-shadow: inset 0 1px 0 #fff8; }
+.matrix-home .meeting-filters > button { padding: 8px 11px; border-radius: 10px; color: #74777b; }
+.matrix-home .meeting-filters > button[aria-pressed=true] { background: #ffffffe0; color: #333638; box-shadow: 0 2px 5px -3px #2224, inset 0 1px 0 #fff; }
+.collection-total { color: #75797d; }
+.matrix-home .conversation-search { border-radius: 13px; padding: 5px 12px; background: #ffffff65; border: 1px solid #fff; box-shadow: inset 0 1px 4px #22222204; backdrop-filter: blur(16px); }
+.matrix-home .conversation-search input { width: 160px; background: transparent; color: #42474b; }
+.matrix-home .conversation-search:focus-within { border-color: #aaa; box-shadow: 0 0 0 3px #22222205; }
+.meeting-month-group > h2 { color: #737579; font-size: 10px; margin: 0 0 11px; }
+.matrix-home .meeting-list { gap: 10px; }
+.matrix-home .meeting-row.glass-meeting {
+  grid-template-columns: 85px minmax(0, 1fr) 92px 16px; gap: 20px;
+  min-height: 100px; padding: 19px 22px; border-radius: 17px;
+  border: 1px solid var(--glass-edge); background: var(--glass-row);
+  box-shadow: var(--glass-shadow); backdrop-filter: blur(18px);
+  transition: background 180ms, box-shadow 180ms, border-color 180ms;
+}
+.matrix-home .glass-meeting .meeting-info > strong { font-size: 16px; font-weight: 530; color: #363a3e; margin-bottom: 6px; }
+.matrix-home .glass-meeting .meeting-info > .meeting-excerpt { font-size: 11.5px; color: #757b81; }
+.glass-meeting-meta { color: #767d83; gap: 7px; }
+.glass-meeting-footer { color: #767d83; }
+.matrix-home .inline-demo { background: #ebedec9c; border: 1px solid #fff9; color: #6c757c; }
+@media (hover: hover) and (pointer: fine) {
+  .matrix-home .meeting-row.glass-meeting:hover { transform: none; background: #ffffffef; border-color: #d9dcdb; box-shadow: 0 7px 20px -13px #22222230, inset 0 1px 0 #fff; }
+}
+.collection-footer { margin-top: 19px; }
+.collection-footer > button { color: #737b81; }
+.meeting-hook { width: 87px; }
+html:root[data-theme=dark] { --glass-edge: #ffffff15; --glass-surface: linear-gradient(140deg, #303033c2, #242426a8); --glass-row: linear-gradient(115deg, #303033b3, #26262994); --glass-shadow: 0 6px 24px -18px #0008, inset 0 1px 0 #ffffff08; }
+html:root[data-theme=dark] .app-shell { background: linear-gradient(145deg, #232325, #18181b); }
+html:root[data-theme=dark] .main-shell { background: linear-gradient(130deg, #212123d9, #1b1b1ee6); border-color: var(--glass-edge); box-shadow: 0 12px 40px -28px #0009, inset 0 1px 0 #ffffff06; }
+html:root[data-theme=dark] :is(.topbar, .page-home, .matrix-home.workspace-home, .matrix-home .collection-tools) { background: transparent; }
+html:root[data-theme=dark] .sidebar.glass-rail { background: transparent; }
+html:root[data-theme=dark] .rail-dock { background: var(--glass-surface); border-color: var(--glass-edge); box-shadow: var(--glass-shadow); }
+html:root[data-theme=dark] .matrix-home .meeting-row.glass-meeting { background: var(--glass-row); border-color: var(--glass-edge); box-shadow: var(--glass-shadow); }
+html:root[data-theme=dark] .matrix-home .meeting-row.glass-meeting:hover { background: #353538c9; }
+html:root[data-theme=dark] .matrix-home .meeting-filters { background: #ffffff04; border-color: #ffffff0b; box-shadow: none; }
+html:root[data-theme=dark] .app-shell .matrix-home .collection-tools { background: transparent; }
+html:root[data-theme=dark] .glass-rail .main-nav > button.active { background: transparent; border-color: transparent; box-shadow: none; color: #e5e5e9; }
+html:root[data-theme=dark] .rail-selected { border-color: #ffffff12; background: #ffffff0b; }
+html:root[data-theme=dark] .matrix-home .meeting-filters > button[aria-pressed=true] { background: #ffffff10; box-shadow: inset 0 1px 0 #ffffff0b; }
+html:root[data-theme=dark] .matrix-home .conversation-search { background: #ffffff07; border-color: #ffffff0c; }
+html:root[data-theme=dark] .matrix-home .library-capture-actions .button.secondary { background: var(--glass-surface); border-color: var(--glass-edge); box-shadow: var(--glass-shadow); }
+html:root[data-theme=dark] .window-controls { border-color: #ffffff12; }
+html:root[data-theme=dark] .window-controls button { color: #b8b8be; }
+html:root[data-theme=dark] .window-controls button:hover { background: #ffffff12; color: #fff; }
+html:root[data-theme=dark] .window-controls .window-close:hover { background: #b83f3d; }
+@media (max-width: 1000px) {
+  .matrix-home.workspace-home { padding: 0 24px 24px; }
+  .matrix-home .meeting-row.glass-meeting { grid-template-columns: 73px minmax(0, 1fr) 79px 14px; gap: 15px; padding: 18px; }
+  .desktop-window .topbar-right { gap: 4px; }
+}
+@media (max-width: 760px) {
+  .main-shell { margin: 5px; border-radius: 18px; }
+  .topbar { height: 55px; min-height: 55px; padding: 0 16px; }
+  .matrix-home.workspace-home { padding: 0 19px 24px; }
+  .matrix-home .meeting-library-heading { flex-direction: column; align-items: stretch; padding: 15px 0 24px; gap: 16px; }
+  .matrix-home .meeting-library-heading h1 { font-size: 28px; }
+  .capture-toolbar { align-items: stretch; }
+  .capture-toolbar .library-capture-actions { width: 100%; }
+  .capture-toolbar .library-capture-actions > button { flex: 1; min-height: 44px; justify-content: center; }
+  .capture-toolbar .capture-capability { text-align: center; }
+  .collection-tools { gap: 12px; margin-bottom: 18px; }
+  .matrix-home .meeting-filters { flex: none; }
+  .matrix-home .meeting-filters > button { min-height: 36px; padding: 7px 9px; font-size: 10px; }
+  .matrix-home .conversation-search { width: 100%; padding: 7px 12px; }
+  .matrix-home .conversation-search input { width: 100%; }
+  .matrix-home .meeting-row.glass-meeting { grid-template-columns: minmax(0, 1fr) 16px; padding: 17px; gap: 12px; }
+  .glass-meeting-meta { grid-column: 1; flex-direction: row; align-items: center; }
+  .matrix-home .glass-meeting .meeting-info { grid-column: 1; }
+  .matrix-home .glass-meeting .meeting-info > strong { font-size: 15px; }
+  .glass-meeting-footer { grid-column: 1; flex-direction: row; gap: 14px; }
+  .meeting-row-open { grid-column: 2; grid-row: 1 / 4; }
+  .collection-footer > button { font-size: 9px; }
+  .meeting-hook { width: 65px; }
+}
+@media (prefers-reduced-motion: reduce) { .window-controls button, .matrix-home .meeting-row.glass-meeting { transition: none; } }
+html[data-reduced-motion=true] .matrix-home .meeting-row.glass-meeting { transition: none; }
+
+/* Notes start as a document, with recording as an optional in-page action. */
+.notes-canvas .document-column { background: transparent; }
+.notes-canvas .document-heading, .notes-canvas .document-body { width: 100%; max-width: 820px; }
+.notes-canvas .document-heading { padding: 42px 46px 0; background: transparent; }
+.notes-canvas .meeting-labels > .eyebrow { display: none; }
+.notes-canvas .meeting-labels:not(:has(.badge)) { display: none; }
+.notes-canvas .meeting-title { font-size: 36px; font-weight: 530; letter-spacing: -1.3px; margin-bottom: 14px; }
+.notes-canvas .meeting-meta { gap: 16px; font-size: 10px; }
+.notes-canvas[data-notes-only=true] .document-tabs { display: none; }
+.notes-canvas[data-notes-only=true] .meeting-meta > span:nth-child(2), .notes-canvas[data-notes-only=true] .meeting-meta > span:nth-child(3) { display: none; }
+.notes-canvas .document-body { padding-top: 28px; }
+.note-page-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 23px 0 2px; }
+.note-page-actions .note-record-entry { min-height: 36px; padding: 9px 13px; border-radius: 12px; font-size: 11px; }
+.note-page-actions > span { font-size: 10px; color: #83858a; }
+.notes-canvas .minimal-note { margin: 0; padding: 0; border: 0; position: relative; }
+.minimal-note .note-editor { min-height: 260px; font-size: 15px; line-height: 1.9; color: var(--text-reading); padding: 2px 0; }
+.minimal-note .note-editor:focus-visible { outline: 2px solid transparent; outline-offset: 8px; }
+.minimal-note:has(.note-editor:focus-visible)::after { content: ''; position: absolute; top: 10px; left: -14px; width: 2px; height: 18px; background: #99999970; border-radius: 2px; pointer-events: none; }
+.minimal-note[data-empty=true] .note-editor > p:first-child::before { content: 'Start writing, or record the conversation…'; float: left; height: 0; color: #989a9d; pointer-events: none; }
+.minimal-note .editor-toolbar { right: 0; top: -33px; border: 1px solid var(--glass-edge); border-radius: 11px; background: var(--glass-surface); backdrop-filter: blur(20px); box-shadow: var(--glass-shadow); }
+.note-recording-setup { margin: 20px auto 0; padding: 17px 20px; width: calc(100% - 92px); max-width: 728px; background: var(--glass-surface); border: 1px solid var(--glass-edge); border-radius: 16px; box-shadow: var(--glass-shadow); }
+.note-recording-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.note-recording-heading > span { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; }
+.note-recording-setup .checkbox-label { margin: 8px 0 16px; font-size: 11px; line-height: 1.7; }
+.note-recording-actions { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
+.note-recording-actions .liquid-record { min-height: 36px; font-size: 11px; padding: 9px 13px; border-radius: 12px; }
+.note-recording-actions > span { font-size: 9px; color: var(--text-secondary); }
+.note-recording-actions .text-button { font-size: 10px; }
+.note-recording-setup .engine-setup { margin-top: 16px; }
+.note-preparation { display: grid; gap: 10px; font-size: 11px; color: var(--text-secondary); }
+.note-preparation progress { width: 100%; accent-color: #555; height: 4px; }
+html:root[data-theme=dark] .notes-canvas .document-heading { background: transparent; }
+html:root[data-theme=dark] .note-recording-setup { background: var(--glass-surface); color: var(--ui-ink); }
+@media (forced-colors: active) { .minimal-note .note-editor:focus-visible { outline-color: Highlight; } }
+@media (max-width: 760px) {
+  .notes-canvas .document-heading { padding: 27px 23px 0; }
+  .notes-canvas .meeting-title { font-size: 30px; letter-spacing: -.9px; }
+  .notes-canvas .document-body { padding: 25px 23px; }
+  .note-page-actions { align-items: flex-start; flex-direction: column; gap: 10px; padding-top: 20px; }
+  .note-page-actions .note-record-entry { min-height: 42px; }
+  .minimal-note .note-editor { font-size: 15px; min-height: 240px; }
+  .note-recording-setup { width: calc(100% - 46px); padding: 14px; }
+  .note-recording-actions > span { width: 100%; }
+}
+
+.notes-canvas[data-personal-note=true] .minimal-note[data-empty=true] .note-editor > p:first-child::before { content: 'Write a thought, or record your voice…'; }

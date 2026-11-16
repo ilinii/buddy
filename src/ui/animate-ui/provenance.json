@@ -1,0 +1,6 @@
+{
+  "implementation": "Buddy original controls and Canvas 2D glyph field",
+  "license": "AGPL-3.0-only",
+  "replaced": "Registry components with additional redistribution restrictions were removed from the open-source build.",
+  "dependencies": {"motion": "MIT", "@base-ui/react": "MIT"}
+}

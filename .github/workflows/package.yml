@@ -1,0 +1,69 @@
+name: Package Buddy offline speech
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}-static-crt
+      - uses: actions/cache@v4
+        with:
+          path: src-tauri/resources/engine
+          key: speech-base-60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - name: Windows package with included speech model
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          . ./scripts/native-env.ps1
+          if (-not $env:LIBCLANG_PATH) { $env:LIBCLANG_PATH = 'C:/Program Files/LLVM/bin' }
+          npm run desktop:package -- --target ${{ matrix.target }} --bundles nsis
+      - name: macOS package with included speech model
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '13.0'
+        run: |
+          brew install llvm cmake
+          export LIBCLANG_PATH="$(brew --prefix llvm)/lib"
+          export BINDGEN_EXTRA_CLANG_ARGS="-isysroot $(xcrun --sdk macosx --show-sdk-path)"
+          npm run desktop:package -- --target ${{ matrix.target }} --bundles dmg,app
+          if [[ '${{ matrix.target }}' == aarch64-* ]]; then bundle_arch=arm64; else bundle_arch=x86_64; fi
+          for app_path in src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app; do
+            bash scripts/verify-macos-bundle.sh "$app_path" "$bundle_arch"
+            ditto -c -k --sequesterRsrc --keepParent "$app_path" "${app_path%.app}.app.zip"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Buddy-${{ matrix.target }}-unsigned
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/setup/*-Windows-Setup.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.zip

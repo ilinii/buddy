@@ -1,0 +1,6 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "iphone-workspace",
+  "description": "Buddy on iPhone. Native commands own audio, sandboxed storage and Keychain. No shell, arbitrary filesystem or HTTP plugins.",
+  "platforms": ["iOS"], "windows": ["main"], "permissions": ["core:default"]
+}

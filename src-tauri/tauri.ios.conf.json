@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "app": { "windows": [{ "label": "main", "title": "Buddy", "visible": true, "width": 390, "height": 844, "minWidth": null, "minHeight": null }] },
+  "bundle": { "iOS": {
+    "minimumSystemVersion": "17.0",
+    "infoPlist": "Info.ios.plist",
+    "frameworks": ["AVFoundation", "AudioToolbox", "Accelerate", "UIKit"]
+  } }
+}

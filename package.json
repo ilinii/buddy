@@ -1,0 +1,61 @@
+{
+  "name": "buddy-meeting-copilot",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 1420 --strictPort",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 1421",
+    "test": "vitest run",
+    "test:ui": "playwright test",
+    "check": "tsc -b",
+    "tauri": "tauri",
+    "desktop": "tauri dev",
+    "ios:setup": "node scripts/ios.mjs setup",
+    "ios": "node scripts/ios.mjs dev",
+    "ios:build": "node scripts/ios.mjs build",
+    "ios:check": "node scripts/ios.mjs check",
+    "desktop:package": "node scripts/package-desktop.mjs",
+    "models:bundle": "node scripts/prepare-model.mjs",
+    "security:check": "node scripts/check-publication.mjs",
+    "website:build": "npm run build && node scripts/build-website.mjs"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.9.0",
+    "@floating-ui/react": "^0.27.20",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@sqlite.org/sqlite-wasm": "3.54.1-build1",
+    "@tauri-apps/api": "^2.10.1",
+    "@tiptap/pm": "3.33.0",
+    "@tiptap/react": "3.33.0",
+    "@tiptap/starter-kit": "3.33.0",
+    "@xyflow/react": "12.12.1",
+    "lucide-react": "1.71.0",
+    "mammoth": "1.13.0",
+    "motion": "^14.12.0",
+    "pdfjs-dist": "6.5.438",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "read-excel-file": "9.3.14",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@tauri-apps/cli": "2.12.4",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "6.3.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.7",
+    "vitest": "5.1.0"
+  },
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ilinii/buddy.git"
+  },
+  "homepage": "https://meetbuddy.me"
+}
