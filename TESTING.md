@@ -22,6 +22,9 @@ Website-specific checks after `npm run website:build` and a local static server:
 $env:BUDDY_SITE_URL='http://127.0.0.1:1446'
 node website/buddy-site/qa.mjs
 node website/buddy-site/download-qa.mjs
+node website/buddy-site/app-demo-qa.mjs
 ```
 
 The download workflow checks all four coming-soon platforms, homepage navigation, inline logo decoding with the former logo URL blocked, mobile menu/focus and reduced motion at six widths. It uses a GitHub metadata fixture and never starts cloud speech.
+
+The app-demo workflow opens the actual React app on desktop/phone, edits a note and title, reads the transcript and obtains a local source-based answer. It hashes a separately persisted SQLite snapshot before/after the sandbox session and verifies reload reset. No real microphone or provider call is used.

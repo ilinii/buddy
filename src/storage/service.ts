@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { DocumentChunk, IndexedDocument, Meeting, Settings } from '../meeting/model';
 
-import { isNative } from '../platform';
+import { isNative, isShowcase } from '../platform';
 export { isNative } from '../platform';
 type State = { meetings: Meeting[]; settings: Settings; documents: IndexedDocument[] };
 class StorageService {
@@ -41,7 +41,7 @@ class StorageService {
     };
     const native = isNative();
     const bytes = native ? new Uint8Array(await invoke<number[]>('load_database')) : undefined;
-    return this.rpc('init', native, bytes);
+    return this.rpc('init', native, bytes, isShowcase);
   }
   load() { return this.rpc<State>('load'); }
   saveMeeting(meeting: Meeting): Promise<void> {

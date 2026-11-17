@@ -15,8 +15,8 @@ function MomentGraphNode({ data }: NodeProps<MomentNode>) {
 }
 const nodeTypes = { moment: MomentGraphNode };
 
-export function Roadmap({ meeting, onSelect, expanded = false }: { meeting: Meeting; onSelect(event: MeetingEvent): void; expanded?: boolean }) {
-  const [open, setOpen] = useState(true);
+export function Roadmap({ meeting, onSelect, expanded = false, initiallyOpen = true }: { meeting: Meeting; onSelect(event: MeetingEvent): void; expanded?: boolean; initiallyOpen?: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
   const [view, setView] = useState<'timeline' | 'graph'>('timeline');
   const [selected, setSelected] = useState<string>();
   const [scrollable, setScrollable] = useState({ back: false, forward: false });

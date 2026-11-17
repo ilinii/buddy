@@ -1,6 +1,9 @@
 import type { Settings } from './meeting/model';
 
 export const isNative = () => '__TAURI_INTERNALS__' in window;
+/** Marketing playgrounds never read or write the visitor's saved workspace. */
+export const isShowcase = typeof window !== 'undefined' && !isNative()
+  && new URLSearchParams(window.location.search).get('showcase') === '1';
 export const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 

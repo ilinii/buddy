@@ -7,6 +7,7 @@ import type { IndexedDocument, Meeting } from '../meeting/model';
 let sqlite: Sqlite3Static;
 let db: Database;
 let native = false;
+let ephemeral = false;
 let queue = Promise.resolve();
 self.onmessage = (message: MessageEvent<{ id: number; method: string; args: unknown[] }>) => {
   queue = queue.then(async () => {
@@ -18,11 +19,12 @@ self.onmessage = (message: MessageEvent<{ id: number; method: string; args: unkn
       const groupRoots=(group:string)=>db.selectObjects('SELECT id FROM documents WHERE group_name=?',[group]).map(r=>`document:${String(r.id)}`);
       if (method === 'init') {
         native = Boolean(args[0]);
+        ephemeral = !native && args[2] === true;
         // Emscripten accepts locateFile; the package's zero-argument TS declaration omits it.
         const initialize = sqlite3InitModule as unknown as (options: { locateFile(file: string): string; print(): void; printErr(): void }) => Promise<Sqlite3Static>;
         sqlite = await initialize({ locateFile: file => file.endsWith('.wasm') ? wasmUrl : file, print: () => {}, printErr: () => {} });
         db = new sqlite.oo1.DB('/buddy.sqlite3', 'c');
-        const bytes = native ? (args[1] as Uint8Array | undefined) : await readBytes();
+        const bytes = native ? (args[1] as Uint8Array | undefined) : ephemeral ? undefined : await readBytes();
         if (bytes?.length) {
           const ptr = sqlite.wasm.allocFromTypedArray(bytes);
           const code = sqlite.capi.sqlite3_deserialize(db.pointer!, 'main', ptr, bytes.length, bytes.length,
@@ -47,7 +49,7 @@ self.onmessage = (message: MessageEvent<{ id: number; method: string; args: unkn
       else if (method === 'load') result = loadState(db);
       else throw new Error('Unknown storage operation');
       let bytes: Uint8Array | undefined;
-      if (mutated) {
+      if (mutated && !ephemeral) {
         bytes = sqlite.capi.sqlite3_js_db_export(db.pointer!);
         if (!native) { await writeBytes(bytes); bytes = undefined; }
       }

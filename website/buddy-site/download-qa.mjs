@@ -18,21 +18,21 @@ try{
   await page.waitForFunction(()=>document.querySelector('.github-count').textContent==='7');
   assert.equal(await page.locator('.github-count').isVisible(),true);
   assert.equal(await page.title(),'Download Buddy — Your meeting workspace');
-  assert.deepEqual(await page.locator('.platform-card h2').allTextContents(),['macOS','Windows','iOS','Android']);
-  assert.deepEqual((await page.locator('.platform-state').allTextContents()).map(x=>x.trim()),Array(4).fill('Coming soon'));
+  assert.deepEqual(await page.locator('.platform-tab>span').evaluateAll(nodes=>nodes.map(n=>n.firstChild.textContent)),['macOS','Windows','iOS','Android']);
+  assert.deepEqual((await page.locator('.platform-tab small').allTextContents()).map(x=>x.trim()),Array(4).fill('Coming soon'));
   assert.equal(await page.locator('a[href*="/releases/download/"]').count(),0);
   assert.equal(await page.locator('form,input,button[disabled]').count(),0);
   for(const logo of await page.locator('img').all())assert(await logo.evaluate(img=>img.complete&&img.naturalWidth>0),'Logo did not decode');
-  assert.equal(await page.locator('.pocket-wave i').count(),47);
+  assert.equal(await page.locator('.waveform i').count(),42);await page.locator('#platform-ios').click();assert.equal(await page.locator('#device-preview').getAttribute('data-device'),'phone');assert.equal(await page.locator('.selected-platform').textContent(),'Buddy for iOS');await page.keyboard.press('ArrowRight');assert.equal(await page.locator('#platform-android').getAttribute('aria-selected'),'true');await page.keyboard.press('Home');assert.equal(await page.locator('#platform-mac').getAttribute('aria-selected'),'true');
   const metrics=await page.evaluate(()=>({width:innerWidth,height:document.documentElement.scrollHeight,overflow:document.documentElement.scrollWidth>innerWidth}));
   assert.equal(metrics.overflow,false);
   await page.locator('#motion-toggle').click();
   assert.equal(await page.locator('html').getAttribute('data-motion'),'paused');
-  assert.equal(await page.locator('.pocket-wave i').first().evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
+  assert.equal(await page.locator('.fluted-light').evaluate(el=>getComputedStyle(el,'::after').animationPlayState),'paused');
   await page.emulateMedia({reducedMotion:'reduce'});
-  assert.equal(await page.locator('.pocket-wave i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
+  assert.equal(await page.locator('.fluted-light').evaluate(el=>getComputedStyle(el,'::after').animationName),'none');
   if(width<=600){await page.locator('.menu-toggle').click();assert(await page.locator('#mobile-nav').isVisible());await page.keyboard.press('Escape');assert.equal(await page.locator('#mobile-nav').isVisible(),false);assert(await page.locator('.menu-toggle').evaluate(el=>el===document.activeElement));}
-  assert(requests.every(url=>!url.includes('/api/voice')&&!url.includes('deepgram.com')));
+  assert(requests.every(url=>!url.includes('/api/voice')&&!url.includes('deepgram.com')));assert(!requests.some(url=>new URL(url).pathname.startsWith('/app/')),'App loaded before an explicit demo action');
   await page.getByRole('link',{name:'Try live transcription',exact:true}).last().click();
   await page.waitForURL('**/#voice-demo');assert(await page.locator('#voice-demo').isVisible());
   assert.deepEqual(errors,[]);
