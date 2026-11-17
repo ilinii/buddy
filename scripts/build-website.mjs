@@ -25,6 +25,17 @@ if(gateway){
  html=html.replace(/<!-- live demo:start -->[\s\S]*?<!-- live demo:end -->/,'');
 }
 await writeFile(join(output,'index.html'),html);await writeFile(join(output,'.nojekyll'),'');
+// Keep the download page useful in static-only self-hosted exports too.
+if(!gateway){
+ const downloadEntry=join(output,'download/index.html');
+ let download=await readFile(downloadEntry,'utf8');
+ download=download.replaceAll('/#voice-demo','/app/?demo=home')
+  .replaceAll('Try live transcription','Explore the workspace')
+  .replace('Hear what Buddy can do.','Get a feel for Buddy.')
+  .replace('Try 45 seconds of live transcription in your browser.','Explore meeting notes and source-linked questions in your browser.')
+  .replace(/<a class="text-link" href="\/app\/\?demo=home">[\s\S]*?<\/a>/,'');
+ await writeFile(downloadEntry,download);
+}
 // Pages serves static files; optional live speech uses a separate bounded gateway.
 let privacy=await readFile(join(output,'privacy.html'),'utf8');
 if(!gateway){
