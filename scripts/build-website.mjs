@@ -8,6 +8,11 @@ await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true}
 await cp(site,output,{recursive:true,filter:path=>!['app','assets','server'].includes(relative(site,path).split(sep)[0])});
 for(const directory of ['assets','brand','fixtures','third-party'])await cp(join(root,'dist',directory),join(output,directory),{recursive:true});
 await mkdir(join(output,'app'),{recursive:true});await cp(join(root,'dist/index.html'),join(output,'app/index.html'));
+// Defense in depth while Pages provisions TLS: never enter the public browser
+// workspace on an HTTP origin. Local/native origins remain untouched.
+const appEntry=join(output,'app/index.html');
+const upgrade="<script>if(location.protocol==='http:'&&/^(www\\.)?meetbuddy\\.me$/.test(location.hostname))location.replace('https://meetbuddy.me'+location.pathname+location.search+location.hash);</script>";
+await writeFile(appEntry,(await readFile(appEntry,'utf8')).replace('<head>','<head>'+upgrade));
 // Generate the app snapshot for an optional Worker build too. These directories stay ignored.
 await cp(join(root,'dist/assets'),join(site,'assets'),{recursive:true});await mkdir(join(site,'app'),{recursive:true});await cp(join(root,'dist/index.html'),join(site,'app/index.html'));
 let html=await readFile(join(output,'index.html'),'utf8');

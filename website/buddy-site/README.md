@@ -20,3 +20,8 @@ The homepage is about half its previous height. The old standalone context secti
 Use BUDDY_VOICE_GATEWAY with the public gateway origin when running website:build to include the live trial. Without it, the build omits the trial and its scripts. The separately deployed durable public gateway is documented in ../voice-demo/README.md; the earlier per-isolate pilot above is retained as reference and is not the public service.
 
 Serve the generated output and run BUDDY_SITE_URL=http://127.0.0.1:PORT node website/buddy-site/qa.mjs from the repository root. The functional QA checks six widths, page height/centering, merged context, tabs/keyboard/source dialogs, menu and reduced motion. It does not use a physical microphone or call a speech provider. Visual capture and the full-page style audit are separate checks.
+
+
+## Download and FAQ follow-up — 17 November 2026
+
+The primary hero/header link now downloads the real Windows x64 preview release. The header links to GitHub and refreshes the public star count without a token. The walkthrough has only Record and Ask your context. The second setup label is Use locally for free; optional BYOK remains in its content. Seven practical questions are restored in a glass accordion with progressive CSS open/close animation. The smaller phone header keeps the stars link and menu, with Download now in the hero. Release integrity and acceptance limits are documented in docs/WINDOWS_PREVIEW_RELEASE.md.

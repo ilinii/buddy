@@ -1,6 +1,6 @@
 # Website design audit
 
-GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supersedes the earlier 76-finding report. Functional navigation, centering, microphone simulation and responsive tests passed. The remaining stylistic findings include full-screen section heights, a text-only FAQ, alignment conventions and typography. The user explicitly requested a shorter page, centered opening and the retained headline.
+GATE: OPEN 39 (rounds used up), 17 November 2026. The requested FAQ/download/stars edits passed functional responsive checks. Remaining findings are stylistic and include full-screen section heights/alignment conventions that differ from the requested compact page. No full design-gate pass is claimed.
 
 ## Specific exceptions
 
@@ -12,13 +12,13 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
 ## Open findings
 
-1. **text-only** — section#questions "A few questions."
+1. **text-only** — section#questions "Before your first meeting."
 
    the closing section is only text: no picture, icon, mock or effect in it
 
    Suggested by checker: give the section a visual: a photograph that fits, the real icons, or a UI fragment on a ground
 
-2. **cta** — section#questions "A few questions."
+2. **cta** — section#questions "Before your first meeting."
 
    the last section before the footer ends with no button
 
@@ -26,7 +26,7 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
 3. **heading-scale** — h2#workflow-title "Your meeting. All the context."
 
-   h2 headings in 2 sizes, 28px ("A few questions.") to 60px (x2.14)
+   h2 headings in 2 sizes, 38px ("Before your first meetin") to 60px (x1.58)
 
    Suggested by checker: size headings by level: the h1 largest, one size per level, each level below the one above
 
@@ -38,7 +38,7 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
 5. **hero-screen** — main#main > section.hero "A LITTLE HELP FOR EVERY MEETING Stay wit"
 
-   the hero ends at 910px on a 900px screen, 10px below the fold: it ends at the fold, 1px either way (SR-1)
+   the hero ends at 913px on a 900px screen, 13px below the fold: it ends at the fold, 1px either way (SR-1)
 
    Suggested by checker: make the hero exactly one screen (height: 100svh, its content fitted inside), never taller or shorter
 
@@ -48,9 +48,9 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
    Suggested by checker: set the section to one screen or two (height: calc(var(--h,1) * 100vh), --h 1 or 2) and cut or split its content to fit
 
-7. **section-height** — section#questions "A few questions. Does a bot join my meet"
+7. **section-height** — section#questions "A FEW THINGS WORTH ASKINGBefore yourfirs"
 
-   the section is 323px tall (0.4 screens), 577px short of one screen (900px): every section after the hero is one screen or two, 2px either way (SR-2)
+   the section is 579px tall (0.6 screens), 321px short of one screen (900px): every section after the hero is one screen or two, 2px either way (SR-2)
 
    Suggested by checker: set the section to one screen or two (height: calc(var(--h,1) * 100vh), --h 1 or 2) and cut or split its content to fit
 
@@ -60,25 +60,25 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
    Suggested by checker: set the section to one screen or two (height: calc(var(--h,1) * 100vh), --h 1 or 2) and cut or split its content to fit
 
-9. **one-section** — h2#questions-title "A few questions."
+9. **one-section** — h2#questions-title "Before yourfirst meeting."
 
-   the screen at scroll 1630px (the top of section 3) shows 260px of section 4 and the heading of section 4 whole and the content of 2 sections, over 24px each beside section 3: a screen shows one section (another may peek 8px, 24px WARN) (SR-4)
+   the screen at scroll 1800px (stride 2) shows 427px of section 4 and the heading of section 4 whole and the content of 2 sections, over 24px each beside section 3: a screen shows one section (another may peek 8px, 24px WARN) (SR-4)
 
    Suggested by checker: make each section exactly one screen or two, so a screen shows one section and no neighbour peeks
 
 10. **one-section** — section#privacy "03 / CHOOSE YOUR SETUPYour AI.On your te"
 
-   the screen at scroll 910px (the top of section 2) shows 180px of section 3 beside section 2: a screen shows one section (another may peek 8px, 24px WARN) (SR-4)
+   the screen at scroll 2040px (the top of section 4) shows 233px of section 3 and the content of 3 sections, over 24px each beside section 4: a screen shows one section (another may peek 8px, 24px WARN) (and 2 more like it: scroll 913px, scroll 900px) (SR-4)
 
    Suggested by checker: make each section exactly one screen or two, so a screen shows one section and no neighbour peeks
 
 11. **one-heading** — h2#privacy-title "Your AI.On your terms."
 
-   headings of two sections show whole on one screen at 5 of 36 scroll positions (13.9%; at scroll 1100, 1150, 1650, 1700px), here with "Your meeting.All the context.": at most 3% on a desktop (SR-5)
+   headings of two sections show whole on one screen at 8 of 41 scroll positions (19.5%; at scroll 1100, 1150, 1600, 1650px), here with "Your meeting.All the context.": at most 3% on a desktop (SR-5)
 
    Suggested by checker: make the sections one screen tall so their headings sit a screen apart and two never share one
 
-12. **container-edges** — header.site-header.wrap "buddy. The workspaceYour setup Explore B"
+12. **container-edges** — header.site-header.wrap "buddy. The workspaceYour setup GitHub★0D"
 
    the nav's content runs 160px from the left and 160px from the right (read from its outermost blocks: no .wrap): the margin is 64-120px at 1440px (one container, equal margins, 2px either way) (SR-6)
 
@@ -86,7 +86,7 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
 13. **container-edges** — main#main > section.hero "A LITTLE HELP FOR EVERY MEETING Stay wit"
 
-   the content of section 1 runs 160px from the left and 160px from the right: the margin is 64-120px at 1440px (one container, equal margins, 2px either way) (and 4 more like it: "01 / THE WORKSPACEYour m", "03 / CHOOSE YOUR SETUPYo", "A few questions. Does a ") (SR-6)
+   the content of section 1 runs 160px from the left and 160px from the right: the margin is 64-120px at 1440px (one container, equal margins, 2px either way) (and 4 more like it: "01 / THE WORKSPACEYour m", "03 / CHOOSE YOUR SETUPYo", "A FEW THINGS WORTH ASKIN") (SR-6)
 
    Suggested by checker: use one container on every section and the nav (.wrap): one margin left and right, 64-120px on a desktop, 16-24px on a phone
 
@@ -96,19 +96,19 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
    Suggested by checker: build the page as header.nav, a main of sections (each one in-flow .wrap plus background layers) and footer.closing
 
-15. **container-edges** — div.faq-list > details:nth-of-type(2) > summary > span "+"
+15. **container-edges** — div#workflow-screen > p.eyebrow "YOUR MEETING SPACE"
 
-   2 text blocks start on a left line at x 1269, 1109px from the container's left: text starts on the container's left, or on one split line (x 637, 732, 827) (also "+") (SR-6)
-
-   Suggested by checker: start the text on the container's left, or on the one split line every split shares
-
-16. **container-edges** — div#workflow-screen > p.eyebrow "YOUR MEETING SPACE"
-
-   4 text blocks start on a left line at x 711, 551px from the container's left: text starts on the container's left, or on one split line (x 637, 732, 827) (also "Product check-in", "Today · 10:30", "Your own notes stay alongside th") (and 1 more like it: x 329) (SR-6)
+   4 text blocks start on a left line at x 711, 551px from the container's left: text starts on the container's left, or on one split line (x 637, 732, 827) (also "Product check-in", "Today · 10:30", "Your own notes stay alongside th") (SR-6)
 
    Suggested by checker: start the text on the container's left, or on the one split line every split shares
 
-17. **container-edges** — section#questions > div.faq-list "Does a bot join my meeting?+No. Buddy re"
+16. **container-edges** — div#voice-demo > div.voice-intro > p.eyebrow "LIVE TRANSCRIPTION / 45 SECONDS"
+
+   3 text blocks start on a left line at x 329, 169px from the container's left: text starts on the container's left, or on one split line (x 637, 732, 827) (also "Try our state-of-the-artspeech-t", "No audio or transcript is saved ") (SR-6)
+
+   Suggested by checker: start the text on the container's left, or on the one split line every split shares
+
+17. **container-edges** — section#questions > div.faq-list "What exactly is Buddy?+A meeting workspa"
 
    a box over half the container wide runs 682-1280px, not on the container's lines at 160-1280px (SR-6)
 
@@ -168,7 +168,7 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
    Suggested by checker: start it on the .wrap left line
 
-27. **edge-left** — #product div.workspace-tour "Record Review Ask your context b"
+27. **edge-left** — #product div.workspace-tour "Record Ask your context buddy.IL"
 
    starts at x 682; the lines are 160 and the column starts
 
@@ -198,7 +198,7 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
    Suggested by checker: start it on the .wrap left line
 
-32. **edge-left** — #privacy div.setup-card.app-frame "Buddy handles it Your API keys C"
+32. **edge-left** — #privacy div.setup-card.app-frame "Buddy handles it Use locally for"
 
    starts at x 770; the lines are 160 and the column starts
 
@@ -228,7 +228,7 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
    Suggested by checker: keep the next section's heading and picture out of this screen
 
-37. **neighbour** — #questions section.questions-section.wrap "A few questions. Does a bot join"
+37. **neighbour** — #questions section.questions-section.wrap "A FEW THINGS WORTH ASKINGBefore "
 
    framed, 88px of the footer shows
 
@@ -236,7 +236,7 @@ GATE: OPEN 39 (rounds used up). This is the current compact-page review; it supe
 
 38. **hero-fold** — section.hero section.hero "A LITTLE HELP FOR EVERY MEETING "
 
-   ends at y 910, past the fold (900): 1.01 screens tall
+   ends at y 913, past the fold (900): 1.01 screens tall
 
    Suggested by checker: the hero fills the first screen alone, its button inside it
 
