@@ -1,247 +1,213 @@
-# Website design audit
+GATE: OPEN 48 (rounds used up)
 
-GATE: OPEN 39 (rounds used up), 17 November 2026. The requested FAQ/download/stars edits passed functional responsive checks. Remaining findings are stylistic and include full-screen section heights/alignment conventions that differ from the requested compact page. No full design-gate pass is claimed.
+17 November 2026 — Homepage after the app-demo revision. No full design-gate pass is claimed. The homepage completed three review rounds. Download review completed two distinct rounds; a third unchanged invocation reused the second result rather than advancing the counter. No artificial file changes were made to consume a round.
 
-## Specific exceptions
+## Scope and exceptions
 
-- copy-headline: The user explicitly retains the Stay with the conversation headline from their screenshot; the adjacent lead names meeting notes and context.
+Software / meeting workspace. The established paper/graphite system, self-hosted Geist/Editorial fonts, Keepsake identity and original ASCII hands are retained. New effects are original glass framing, monochrome reflective buttons, manual platform selection and finite sample text reveals. Actual app code loads only after an explicit Try action. All native downloads remain coming soon. No external stock image or invented release date was introduced.
 
-- motion-layer: This established site uses original CSS motion rather than the kit stylesheet: .button:hover moves by -2px, press scales, link underlines animate and tabs transition. These rules are present and observed; no licensed kit code was copied.
+Existing waivers remain unchanged: the retained homepage headline is named by the user; original CSS motion supplies hover/press/entrance without the kit stylesheet; the actual hero entrance does not use the kit-specific class. Homepage-only exceptions are ignored when they do not match the download page. No new exceptions were added.
 
-- hero-enter: The hero has data-enter and runs the original hero-enter keyframes for opacity, translation and blur; reduced motion disables it. Requiring the kit-specific html.m-enter class would misreport this functioning entrance.
+Real contrast and phone tap-target findings found during review were corrected. Remaining findings largely concern the kit's prescribed full-screen sections, its single-heading/container convention versus a nested product UI, and required dealt moments. We retain a compact page and an interactive app window. The final small hero demo-link readability adjustment is covered by the subsequent responsive browser check rather than a fourth homepage design round.
+
+Functional browser checks pass at six widths. The actual app sandbox was verified at desktop and phone widths, including editing notes, transcript navigation, local answers, no provider traffic, reset on close and no change to a separately persisted workspace. Tablet, desktop and phone screenshots were reviewed. The full kit performance audit was not run; Vite still warns about the pre-existing app bundle size, mitigated here by click-to-load framing. No physical audio or native platform verification is claimed.
 
 ## Open findings
 
-1. **text-only** — section#questions "Before your first meeting."
+1. **sample-label     div.workspace-tour > div.demo-window > div.demo-window-foot > span "Sample content · No mi  [1440]**
+
+   a note that the page's names or figures are examples ("Sample content"): it reads as an apology and undercuts every claim
+
+2. **no-visual        section#product "Your meeting. All the context."  [1440, 390]**
+
+   no picture, effect or mock in this section; a feature section needs a visual
+
+3. **text-only        section#questions "Before your first meeting."  [1440, 390]**
 
    the closing section is only text: no picture, icon, mock or effect in it
 
-   Suggested by checker: give the section a visual: a photograph that fits, the real icons, or a UI fragment on a ground
+4. **button-styles    (the page)  [1440, 390]**
 
-2. **cta** — section#questions "Before your first meeting."
+   3 button styles on the page: soft, fill #ffffff, outline #d9dcd3 x1 ("GitHub ★ 0"); soft, fill #242524, outline #383b36 x3 ("Download now ↗"); pill, fill gradient, outline #ffffff x1 ("Try the app ↗")
+
+5. **cta              section#questions "Before your first meeting."  [1440, 390]**
 
    the last section before the footer ends with no button
 
-   Suggested by checker: add the action: a button in the hero, one on every priced item, one in the closing section
+6. **heading-scale    h2#privacy-title "Your AI. On your terms."  [1440, 390]**
 
-3. **heading-scale** — h2#workflow-title "Your meeting. All the context."
+   h2 headings in 3 sizes, 38px ("Before your first meetin") to 60px (x1.58)
 
-   h2 headings in 2 sizes, 38px ("Before your first meetin") to 60px (x1.58)
+7. **focus-visible    div.workspace-tour:nth-of-type(2) > div.demo-window > div.demo-window-bar:nth-of-type(1) >  [1440]**
 
-   Suggested by checker: size headings by level: the h1 largest, one size per level, each level below the one above
+   Tab stop 11, a "Open in a tab ↗": its focus change is faint: 1.27:1 against the ground, 3:1 needed
 
-4. **moment-none** — (the page)
+8. **focus-visible    button#step-record "Record"  [1440]**
+
+   Tab stop 12, button "Record": its focus change is faint: 1.12:1 against the ground, 3:1 needed
+
+9. **focus-visible    div#workflow-panel "Record"  [1440]**
+
+   Tab stop 13, div "Record": its focus change is faint: 1.25:1 against the ground, 3:1 needed
+
+10. **focus-visible    div.workspace-tour:nth-of-type(2) > div.demo-window > div.demo-window-foot:nth-of-type(4)   [1440]**
+
+   Tab stop 14, button "Replay sample captions": its focus change is faint: 1.27:1 against the ground, 3:1 needed
+
+11. **moment-none      (the page)  [1440]**
 
    a software page (--type) deals no moment: every kind carries one, two on a long page (moments.md)
 
-   Suggested by checker: deal one (moments.mjs pick --page software) and mount it in its own section
+12. **hero-screen      main#main > section.hero "A LITTLE HELP FOR EVERY MEETING Stay wit"  [1440]**
 
-5. **hero-screen** — main#main > section.hero "A LITTLE HELP FOR EVERY MEETING Stay wit"
+   the hero ends at 940px on a 900px screen, 40px below the fold: it ends at the fold, 1px either way (SR-1)
 
-   the hero ends at 913px on a 900px screen, 13px below the fold: it ends at the fold, 1px either way (SR-1)
-
-   Suggested by checker: make the hero exactly one screen (height: 100svh, its content fitted inside), never taller or shorter
-
-6. **section-height** — footer.site-footer.wrap "buddy.Source · AGPL-3.0Privacy© 2026 Bud"
+13. **section-height   footer.site-footer.wrap "buddy.Source · AGPL-3.0Privacy© 2026 Bud"  [1440]**
 
    the section is 88px tall (0.1 screens), 812px short of one screen (900px): every section after the hero is one screen or two, 2px either way (SR-2)
 
-   Suggested by checker: set the section to one screen or two (height: calc(var(--h,1) * 100vh), --h 1 or 2) and cut or split its content to fit
-
-7. **section-height** — section#questions "A FEW THINGS WORTH ASKINGBefore yourfirs"
+14. **section-height (screen-short, screen-height) section#questions "A FEW THINGS WORTH ASKINGBefore yourfirs"  [1440, 390]**
 
    the section is 579px tall (0.6 screens), 321px short of one screen (900px): every section after the hero is one screen or two, 2px either way (SR-2)
 
-   Suggested by checker: set the section to one screen or two (height: calc(var(--h,1) * 100vh), --h 1 or 2) and cut or split its content to fit
-
-8. **section-height** — section#privacy "03 / CHOOSE YOUR SETUPYour AI.On your te"
+15. **section-height (screen-short, screen-height) section#privacy "03 / CHOOSE YOUR SETUPYour AI.On your te"  [1440, 390]**
 
    the section is 640px tall (0.7 screens), 260px short of one screen (900px): every section after the hero is one screen or two, 2px either way (and 1 more like it: "01 / THE WORKSPACEYour m") (SR-2)
 
-   Suggested by checker: set the section to one screen or two (height: calc(var(--h,1) * 100vh), --h 1 or 2) and cut or split its content to fit
+16. **one-section      h2#questions-title "Before yourfirst meeting."  [1440]**
 
-9. **one-section** — h2#questions-title "Before yourfirst meeting."
+   the screen at scroll 1800px (stride 2) shows 314px of section 4 and the heading of section 4 whole and the content of 2 sections, over 24px each beside section 3: a screen shows one section (another may peek 8px, 24px WA
 
-   the screen at scroll 1800px (stride 2) shows 427px of section 4 and the heading of section 4 whole and the content of 2 sections, over 24px each beside section 3: a screen shows one section (another may peek 8px, 24px WARN) (SR-4)
+17. **one-section (neighbour) section#privacy "03 / CHOOSE YOUR SETUPYour AI.On your te"  [1440, 390]**
 
-   Suggested by checker: make each section exactly one screen or two, so a screen shows one section and no neighbour peeks
+   the screen at scroll 2153px (the top of section 4) shows 233px of section 3 and the content of 3 sections, over 24px each beside section 4: a screen shows one section (another may peek 8px, 24px WARN) (and 2 more like it
 
-10. **one-section** — section#privacy "03 / CHOOSE YOUR SETUPYour AI.On your te"
+18. **one-heading      h2#questions-title "Before yourfirst meeting."  [1440]**
 
-   the screen at scroll 2040px (the top of section 4) shows 233px of section 3 and the content of 3 sections, over 24px each beside section 4: a screen shows one section (another may peek 8px, 24px WARN) (and 2 more like it: scroll 913px, scroll 900px) (SR-4)
+   headings of two sections show whole on one screen at 6 of 44 scroll positions (13.6%; at scroll 1700, 1750, 1800, 1850px), here with "Your AI.On your terms.": at most 3% on a desktop (SR-5)
 
-   Suggested by checker: make each section exactly one screen or two, so a screen shows one section and no neighbour peeks
-
-11. **one-heading** — h2#privacy-title "Your AI.On your terms."
-
-   headings of two sections show whole on one screen at 8 of 41 scroll positions (19.5%; at scroll 1100, 1150, 1600, 1650px), here with "Your meeting.All the context.": at most 3% on a desktop (SR-5)
-
-   Suggested by checker: make the sections one screen tall so their headings sit a screen apart and two never share one
-
-12. **container-edges** — header.site-header.wrap "buddy. The workspaceYour setup GitHub★0D"
+19. **container-edges  header.site-header.wrap "buddy. The workspaceYour setup GitHub★0D"  [1440]**
 
    the nav's content runs 160px from the left and 160px from the right (read from its outermost blocks: no .wrap): the margin is 64-120px at 1440px (one container, equal margins, 2px either way) (SR-6)
 
-   Suggested by checker: use one container on every section and the nav (.wrap): one margin left and right, 64-120px on a desktop, 16-24px on a phone
+20. **container-edges  main#main > section.hero "A LITTLE HELP FOR EVERY MEETING Stay wit"  [1440]**
 
-13. **container-edges** — main#main > section.hero "A LITTLE HELP FOR EVERY MEETING Stay wit"
+   the content of section 1 runs 160px from the left and 160px from the right: the margin is 64-120px at 1440px (one container, equal margins, 2px either way) (and 4 more like it: "01 / THE WORKSPACEYour m", "03 / CHOOSE YO
 
-   the content of section 1 runs 160px from the left and 160px from the right: the margin is 64-120px at 1440px (one container, equal margins, 2px either way) (and 4 more like it: "01 / THE WORKSPACEYour m", "03 / CHOOSE YOUR SETUPYo", "A FEW THINGS WORTH ASKIN") (SR-6)
-
-   Suggested by checker: use one container on every section and the nav (.wrap): one margin left and right, 64-120px on a desktop, 16-24px on a phone
-
-14. **container-edges** — a.skip-link "Skip to content"
+21. **container-edges  a.skip-link "Skip to content"  [1440]**
 
    a <a> at the top of the page, outside header.nav, main, footer.closing and nav.actionbar (SR-6)
 
-   Suggested by checker: build the page as header.nav, a main of sections (each one in-flow .wrap plus background layers) and footer.closing
+22. **container-edges  div.demo-record-columns > div.demo-recorder > div:nth-of-type(1) > span:nth-of-type(2) "Tr  [1440]**
 
-15. **container-edges** — div#workflow-screen > p.eyebrow "YOUR MEETING SPACE"
+   1 text block starts on a left line at x 378, 218px from the container's left: text starts on the container's left, or on one split line (x 637, 732, 827) (SR-6)
 
-   4 text blocks start on a left line at x 711, 551px from the container's left: text starts on the container's left, or on one split line (x 637, 732, 827) (also "Product check-in", "Today · 10:30", "Your own notes stay alongside th") (SR-6)
+23. **container-edges  div.demo-tour-body > div.demo-tour-main > div.demo-guide-top > p.eyebrow "MY MEETINGS / PR  [1440]**
 
-   Suggested by checker: start the text on the container's left, or on the one split line every split shares
+   3 text blocks start on a left line at x 366, 206px from the container's left: text starts on the container's left, or on one split line (x 637, 732, 827) (also "YOUR MEETING SPACE", "Let’s test the new welcome flow ") (a
 
-16. **container-edges** — div#voice-demo > div.voice-intro > p.eyebrow "LIVE TRANSCRIPTION / 45 SECONDS"
-
-   3 text blocks start on a left line at x 329, 169px from the container's left: text starts on the container's left, or on one split line (x 637, 732, 827) (also "Try our state-of-the-artspeech-t", "No audio or transcript is saved ") (SR-6)
-
-   Suggested by checker: start the text on the container's left, or on the one split line every split shares
-
-17. **container-edges** — section#questions > div.faq-list "What exactly is Buddy?+A meeting workspa"
+24. **container-edges  section#questions > div.faq-list "What exactly is Buddy?+A meeting workspa"  [1440]**
 
    a box over half the container wide runs 682-1280px, not on the container's lines at 160-1280px (SR-6)
 
-   Suggested by checker: run the picture or box from the container's left line to its right line, or put it in a row or a split
-
-18. **container-edges** — div#voice-demo "LIVE TRANSCRIPTION / 45 SECONDSTry our s"
+25. **container-edges  div#voice-demo "LIVE TRANSCRIPTION / 45 SECONDSTry our s"  [1440]**
 
    a box over half the container wide runs 300-1140px, not on the container's lines at 160-1280px (SR-6)
 
-   Suggested by checker: run the picture or box from the container's left line to its right line, or put it in a row or a split
-
-19. **split-pair** — section#product > div.wrap.workspace-layout "01 / THE WORKSPACEYour meeting.All the c"
-
-   the two columns of the split start 118px apart at the top: a split's columns are top-aligned, 8px either way (SR-8)
-
-   Suggested by checker: top-align both columns of the split (align-items: start)
-
-20. **split-pair** — section#privacy > div.wrap.setup-layout "03 / CHOOSE YOUR SETUPYour AI.On your te"
+26. **split-pair       section#privacy > div.wrap.setup-layout "03 / CHOOSE YOUR SETUPYour AI.On your te"  [1440]**
 
    the two columns of the split start 66px apart at the top (centred on each other): a split's columns are top-aligned, 8px either way (SR-8)
 
-   Suggested by checker: top-align both columns of the split (align-items: start)
-
-21. **split-pair** — div#voice-demo "LIVE TRANSCRIPTION / 45 SECONDSTry our s"
+27. **split-pair       div#voice-demo "LIVE TRANSCRIPTION / 45 SECONDSTry our s"  [1440]**
 
    the split's columns are off the page's one pair of lines: its right column starts at x 693, on none of the split lines 637 (k=5), 732 (k=6), 827 (k=7) (SR-8)
 
-   Suggested by checker: start every split's right column on one shared line (wrap.left + k x (width + 24) / 12, k 5, 6 or 7; 6 on a place page) and end the left one 24px before it
+28. **split-pair       div#workflow-screen > div.demo-record-columns "Transcript04:12Let’s test the new welcom"  [1440]**
 
-22. **hero-fill** — section#product "Your meeting. All the context."
+   the split's columns are off the page's one pair of lines: its right column starts at x 863, the first split's at 693; its right column starts at x 863, on none of the split lines 637 (k=5), 732 (k=6), 827 (k=7) (SR-8)
 
-   the next section shows on the first screen: it starts at 900px on a 1024px screen (the hero ends at 900px)
+29. **hero-fill        section#product "Your meeting. All the context."  [768]**
 
-   Suggested by checker: let the hero fill the first screen alone (min-height: 100svh, less above it): nothing of the next section on load
+   the next section shows on the first screen: it starts at 908px on a 1024px screen (the hero ends at 908px)
 
-23. **edge-left** — section.hero p.eyebrow "LIVE TRANSCRIPTION / 45 SECONDS"
-
-   starts at x 329; the lines are 160 and the column starts
-
-   Suggested by checker: start it on the .wrap left line
-
-24. **edge-left** — section.hero p.voice-title "Try our state-of-the-artspeech-t"
+30. **edge-left        section.hero p.eyebrow "LIVE TRANSCRIPTION / 45 SECONDS"  [1440]**
 
    starts at x 329; the lines are 160 and the column starts
 
-   Suggested by checker: start it on the .wrap left line
-
-25. **edge-left** — section.hero p.voice-permission "No audio or transcript is saved "
+31. **edge-left        section.hero p.voice-title "Try our state-of-the-artspeech-t"  [1440]**
 
    starts at x 329; the lines are 160 and the column starts
 
-   Suggested by checker: start it on the .wrap left line
+32. **edge-left        section.hero p.voice-permission "No audio or transcript is saved "  [1440]**
 
-26. **edge-left** — section.hero p.voice-speakers
+   starts at x 329; the lines are 160 and the column starts
+
+33. **edge-left        section.hero p.voice-speakers  [1440]**
 
    starts at x 722.2; the lines are 160 and the column starts
 
-   Suggested by checker: start it on the .wrap left line
+34. **edge-left        #product p "Take a look around. Follow a con"  [1440]**
 
-27. **edge-left** — #product div.workspace-tour "Record Ask your context buddy.IL"
+   starts at x 1035; the lines are 160 and the column starts
 
-   starts at x 682; the lines are 160 and the column starts
+35. **edge-left        #product p.eyebrow "MY MEETINGS / PRODUCT CHECK-IN"  [1440]**
 
-   Suggested by checker: start it on the .wrap left line
+   starts at x 366; the lines are 160 and the column starts
 
-28. **edge-left** — #product p.eyebrow "YOUR MEETING SPACE"
+36. **edge-left        #product p.eyebrow "YOUR MEETING SPACE"  [1440]**
 
-   starts at x 711; the lines are 160 and the column starts
+   starts at x 366; the lines are 160 and the column starts
 
-   Suggested by checker: start it on the .wrap left line
+37. **edge-left        #product h3 "Product check-in"  [1440]**
 
-29. **edge-left** — #product h3 "Product check-in"
+   starts at x 366; the lines are 160 and the column starts
 
-   starts at x 711; the lines are 160 and the column starts
+38. **edge-left        #product p.sample-caption "Let’s test the new welcome flow "  [1440]**
 
-   Suggested by checker: start it on the .wrap left line
+   starts at x 366; the lines are 160 and the column starts
 
-30. **edge-left** — #product p "“Let’s test the new welcome flow"
+39. **edge-left        #product p.eyebrow "YOUR NOTES"  [1440]**
 
-   starts at x 711; the lines are 160 and the column starts
+   starts at x 888.9; the lines are 160 and the column starts
 
-   Suggested by checker: start it on the .wrap left line
+40. **edge-left        #product p "Keep the first release focused."  [1440]**
 
-31. **edge-left** — #product p.demo-personal-note "Your own notes stay alongside th"
+   starts at x 888.9; the lines are 160 and the column starts
 
-   starts at x 711; the lines are 160 and the column starts
+41. **edge-left        #product p.demo-note-foot "The next step, kept in context."  [1440]**
 
-   Suggested by checker: start it on the .wrap left line
+   starts at x 888.9; the lines are 160 and the column starts
 
-32. **edge-left** — #privacy div.setup-card.app-frame "Buddy handles it Use locally for"
+42. **edge-left        #privacy div.setup-card.app-frame "Buddy handles it Use locally for"  [1440]**
 
    starts at x 770; the lines are 160 and the column starts
 
-   Suggested by checker: start it on the .wrap left line
-
-33. **edge-left** — #privacy h3 "Buddy handles it for you."
+43. **edge-left        #privacy h3 "Buddy handles it for you."  [1440]**
 
    starts at x 800; the lines are 160 and the column starts
 
-   Suggested by checker: start it on the .wrap left line
-
-34. **edge-left** — #privacy p "Transcription and answers, with "
+44. **edge-left        #privacy p "Transcription and answers, with "  [1440]**
 
    starts at x 800; the lines are 160 and the column starts
 
-   Suggested by checker: start it on the .wrap left line
+45. **screen-short (screen-height) #product section.workflow.section-dark "01 / THE WORKSPACEYour meeting.A"  [1440, 390]**
 
-35. **screen-short** — #product section.workflow.section-dark "01 / THE WORKSPACEYour meeting.A"
+   806px tall; one screen under the nav is 900px
 
-   720px tall; one screen under the nav is 900px
+46. **neighbour-ground #product section.workflow.section-dark "01 / THE WORKSPACEYour meeting.A"  [1440, 390]**
 
-   Suggested by checker: make the section one full screen (--h: 1, layout-v4.md section 2)
+   framed, 94px of #privacy section.privacy-section "03 / CHOOSE YOUR SETUPYour AI.On"'s ground shows
 
-36. **neighbour** — #product section.workflow.section-dark "01 / THE WORKSPACEYour meeting.A"
-
-   framed, 21px of #privacy section.privacy-section "03 / CHOOSE YOUR SETUPYour AI.On" shows
-
-   Suggested by checker: keep the next section's heading and picture out of this screen
-
-37. **neighbour** — #questions section.questions-section.wrap "A FEW THINGS WORTH ASKINGBefore "
+47. **neighbour        #questions section.questions-section.wrap "A FEW THINGS WORTH ASKINGBefore "  [1440, 390]**
 
    framed, 88px of the footer shows
 
-   Suggested by checker: keep the next section's heading and picture out of this screen
+48. **hero-fold        section.hero section.hero "A LITTLE HELP FOR EVERY MEETING "  [1440, 390]**
 
-38. **hero-fold** — section.hero section.hero "A LITTLE HELP FOR EVERY MEETING "
+   ends at y 940, past the fold (900): 1.04 screens tall
 
-   ends at y 913, past the fold (900): 1.01 screens tall
+## Warnings
 
-   Suggested by checker: the hero fills the first screen alone, its button inside it
+26 WARN (not blocking), first: same-action main#main > section.hero > div.hero-copy; copy-buttons header.site-header.wrap > div.header-act; copy-actions header.site-header.wrap > div.header-act; copy-actions (the page); centre-axis main#main > section.hero > div.hero-copy
 
-39. **neighbour-ground** — #product section.workflow.section-dark "01 / THE WORKSPACEYour meeting.A"
-
-   framed, 10px of #privacy section.privacy-section "03 / CHOOSE YOUR SETUPYour AI.On"'s ground shows
-
-   Suggested by checker: end the ground with the section
+See `WEBSITE_APP_DEMO.md` for component references, storage isolation and verification scope. Raw checker output remains an ignored local build artifact.
