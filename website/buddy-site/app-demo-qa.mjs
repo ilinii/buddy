@@ -15,8 +15,8 @@ try{
   await page.getByRole('textbox',{name:'Meeting title',exact:true}).fill('Persisted workspace sentinel');
   await expect(page.locator('.save-indicator')).toHaveText('Saved locally');
   const before=await storedBytes(page);
-  await page.goto(base,{waitUntil:'networkidle'});
-  await page.locator('.hero-demo-link').click();
+  await page.goto(`${base}/download/`,{waitUntil:'networkidle'});
+  await page.locator('[data-demo-open]').click();
   const app=page.frameLocator('[data-demo-slot] iframe');
   await expect(app.locator('.showcase-notice')).toContainText('Changes reset on reload');
   await expect(app.getByRole('textbox',{name:'Meeting title',exact:true})).toHaveValue('Q2 growth & priorities');
@@ -37,7 +37,7 @@ try{
   await page.locator('[data-demo-open]').click();
   await expect(page.frameLocator('[data-demo-slot] iframe').getByRole('textbox',{name:'Meeting title',exact:true})).toHaveValue('Q2 growth & priorities');
   await page.locator('[data-demo-back]').click();
-  // Both entry pages open the same actual app with isolated storage.
+  // The phone platform preview opens the same isolated app.
   await page.goto(`${base}/download/`,{waitUntil:'networkidle'});
   await page.locator('#platform-ios').click();await page.locator('[data-demo-open]').click();
   await expect(page.frameLocator('[data-demo-slot] iframe').locator('.showcase-notice')).toBeVisible();

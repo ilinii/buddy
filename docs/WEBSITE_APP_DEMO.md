@@ -1,5 +1,7 @@
 # Website app demo and download refresh
 
+Latest correction: the user preferred the earlier homepage. Its HTML and homepage behavior have been restored exactly from `c1090de`. The glass platform dock and isolated interactive app remain on `/download/`; references below to the redesigned homepage describe the earlier revision, not the current live home. The app-demo workflow now enters through the download page.
+
 17 November 2026. The homepage now has a full-width guided meeting window and a real, on-demand app sandbox. The download page replaces the earlier large cards with a four-platform selection dock and a desktop/phone frame. All platforms remain **Coming soon**; there is no new installer release, signup or payment flow.
 
 ## Design references and source
