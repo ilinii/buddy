@@ -1,3 +1,4 @@
+mod cancellation;
 mod engine;
 mod focus;
 mod knowledge;
@@ -92,6 +93,7 @@ pub fn run() {
             providers::has_api_key,
             providers::delete_api_key,
             providers::ask_gemini,
+            providers::cancel_gemini,
             focus::open_notification_settings
         ])
         .build(tauri::generate_context!())

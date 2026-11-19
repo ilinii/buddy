@@ -1,3 +1,4 @@
+use crate::cancellation::{cancellable, Requests};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::time::{Duration, Instant};
@@ -6,6 +7,7 @@ use tauri::State;
 #[derive(Default)]
 pub struct ProviderGate {
     last_request: tokio::sync::Mutex<Option<Instant>>,
+    requests: Requests,
 }
 
 fn credential() -> Result<keyring::Entry, String> {
@@ -46,12 +48,19 @@ pub struct Source {
 }
 
 #[tauri::command]
+pub fn cancel_gemini(gate: State<'_, ProviderGate>, request_id: String) {
+    gate.requests.cancel(&request_id);
+}
+
+#[tauri::command]
 pub async fn ask_gemini(
     gate: State<'_, ProviderGate>,
+    request_id: String,
     model: String,
     question: String,
     sources: Vec<Source>,
 ) -> Result<String, String> {
+    let (_active, mut cancel) = gate.requests.start(&request_id)?;
     if model.is_empty()
         || model.len() > 80
         || !model.starts_with("gemini-")
@@ -95,17 +104,44 @@ pub async fn ask_gemini(
     });
     let url =
         format!("https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent");
+    let response = request_gemini(&client, &url, &key, &body, &mut cancel).await?;
+    response
+        .pointer("/candidates/0/content/parts")
+        .and_then(|p| p.as_array())
+        .and_then(|p| {
+            p.iter()
+                .filter(|part| part.get("thought").and_then(|v| v.as_bool()) != Some(true))
+                .find_map(|part| part.get("text").and_then(|v| v.as_str()))
+        })
+        .map(str::to_owned)
+        .ok_or_else(|| "Gemini returned no usable answer".into())
+}
+
+async fn request_gemini(
+    client: &reqwest::Client,
+    url: &str,
+    key: &str,
+    body: &serde_json::Value,
+    cancel: &mut tokio::sync::watch::Receiver<bool>,
+) -> Result<serde_json::Value, String> {
     for attempt in 0..3u32 {
-        let response = client
-            .post(&url)
-            .header("x-goog-api-key", &key)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|_| "Gemini network request failed or timed out")?;
+        let response = cancellable(cancel, async {
+            client
+                .post(url)
+                .header("x-goog-api-key", key)
+                .json(body)
+                .send()
+                .await
+                .map_err(|_| "Gemini network request failed or timed out".into())
+        })
+        .await?;
         let status = response.status();
         if (status.as_u16() == 429 || status.is_server_error()) && attempt < 2 {
-            tokio::time::sleep(Duration::from_millis(1000 * 2u64.pow(attempt))).await;
+            cancellable(cancel, async {
+                tokio::time::sleep(Duration::from_millis(1000 * 2u64.pow(attempt))).await;
+                Ok(())
+            })
+            .await?;
             continue;
         }
         if !status.is_success() {
@@ -114,20 +150,77 @@ pub async fn ask_gemini(
         if response.content_length().unwrap_or(0) > 1_000_000 {
             return Err("Provider response exceeds the limit".into());
         }
-        let response: serde_json::Value = response
-            .json()
-            .await
-            .map_err(|_| "Provider returned invalid JSON")?;
-        return response
-            .pointer("/candidates/0/content/parts")
-            .and_then(|p| p.as_array())
-            .and_then(|p| {
-                p.iter()
-                    .filter(|part| part.get("thought").and_then(|v| v.as_bool()) != Some(true))
-                    .find_map(|part| part.get("text").and_then(|v| v.as_str()))
-            })
-            .map(str::to_owned)
-            .ok_or_else(|| "Gemini returned no usable answer".into());
+        return cancellable(cancel, async {
+            response
+                .json()
+                .await
+                .map_err(|_| "Provider returned invalid JSON".into())
+        })
+        .await;
     }
     Err("Provider quota exhausted".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+    };
+
+    #[tokio::test]
+    async fn cancellation_during_backoff_prevents_another_http_request() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/fixture", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let count = Arc::new(AtomicUsize::new(0));
+        let received = count.clone();
+        let server = std::thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_millis(1400);
+            while Instant::now() < deadline {
+                match listener.accept() {
+                    Ok((mut stream, _)) => {
+                        stream
+                            .set_read_timeout(Some(Duration::from_secs(1)))
+                            .unwrap();
+                        let _ = stream.read(&mut [0u8; 8192]);
+                        received.fetch_add(1, Ordering::SeqCst);
+                        let _ = stream.write_all(b"HTTP/1.1 429 Too Many Requests\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}");
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(5))
+                    }
+                    Err(error) => panic!("Fixture server failed: {error}"),
+                }
+            }
+        });
+        let requests = Requests::default();
+        let id = uuid::Uuid::new_v4().to_string();
+        let (_active, mut cancel) = requests.start(&id).unwrap();
+        let stop = async {
+            tokio::time::timeout(Duration::from_secs(1), async {
+                while count.load(Ordering::SeqCst) == 0 {
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                }
+            })
+            .await
+            .unwrap();
+            tokio::time::sleep(Duration::from_millis(30)).await;
+            requests.cancel(&id);
+        };
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let body = json!({"fictional":"fixture"});
+        let (result, ()) = tokio::join!(
+            request_gemini(&client, &url, "test-only", &body, &mut cancel),
+            stop
+        );
+        assert_eq!(result.unwrap_err(), "Request cancelled");
+        server.join().unwrap();
+        assert_eq!(count.load(Ordering::SeqCst), 1);
+    }
 }

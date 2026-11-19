@@ -24,6 +24,7 @@ export class NvidiaProvider implements AssistantProvider {
    const response=responseSchema.parse(raw);const byId=new Map(corpus.chunks.map(c=>[c.id,c]));
    if(![...response.sourceIds,...response.selected].every(id=>byId.has(id)))throw Error('The provider returned unknown evidence. The answer was discarded.');
    const latest=await storage.load();if(!await evidenceUnchanged(response.selected.map(id=>byId.get(id)!),latest.meetings,latest.documents))throw Error('A source was changed or removed while answering. Ask again using the current sources.');
+   if(signal.aborted)throw new DOMException('Request cancelled','AbortError');
    return {text:response.text.replace(/\[S(\d+)\]/g,(_,n:string)=>{const id=response.selected[Number(n)-1];const index=response.sourceIds.indexOf(id);return index>=0?`[${index+1}]`:'[source unavailable]';}),citations:response.sourceIds.map(id=>byId.get(id)!.citation),provider:'nvidia',details:[response.route==='hybrid'?'Hybrid search':response.route==='focused-context'?'Full meeting context':'Keyword search',`${response.selected.length} passage${response.selected.length===1?'':'s'}`,...response.warnings].join(' · ')};
   }finally{unlisten();signal.removeEventListener('abort',stop);}
  }

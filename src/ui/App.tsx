@@ -133,6 +133,9 @@ export function App() {
   const terminalSessions=useRef(new Set<string>());
   const replayIndex = useRef(0);
   const originals = useRef(new Map<string, File>());
+  const importJob = useRef<AbortController | null>(null);
+  const deletingWorkspace = useRef(false);
+  useEffect(() => () => importJob.current?.abort(), []);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const audioInput = useRef<HTMLInputElement>(null);
@@ -311,33 +314,45 @@ export function App() {
   };
   const toggleAction = (m: Meeting, e: MeetingEvent) => persist({ ...m, events: m.events.map(item => item.id === e.id ? { ...item, done: !item.done, updatedAt: new Date().toISOString() } : item) });
   const importFiles = async (files: FileList | null, folder = false) => {
-    if (!files?.length) return;
+    if (!files?.length || deletingWorkspace.current) return;
     const supported = Array.from(files).filter(f => supportedExtensions.includes(f.name.split('.').pop()!.toLowerCase()));
     if (supported.length > 200) { setError('Choose at most 200 supported files per import.'); return; }
     if (!supported.length) { setError('No supported files found. Choose PDF, DOCX, XLSX, CSV, TXT, or Markdown.'); return; }
+    importJob.current?.abort();
+    const controller = new AbortController(); importJob.current = controller;
     setBusy(true); setError(''); let count = 0;
     const errors: string[] = [];
     let nextDocs = [...documents];
     const imported: IndexedDocument[] = [];
-    for (const file of supported) {
-      setImportStatus(`Indexing ${count + 1} of ${supported.length} · ${file.name}`);
-      try {
-        const group = folder ? `Folder: ${file.webkitRelativePath.split('/')[0]}` : 'Selected files';
-        const doc = await extractDocument(file, group);
-        await storage.indexDocument(doc); originals.current.set(doc.id, file);
-        imported.push(doc);
-        const existing = nextDocs.findIndex(d => d.id === doc.id); if (existing >= 0) nextDocs[existing] = doc; else nextDocs.push(doc);
-        count++;
-      } catch (e) { errors.push(e instanceof Error ? e.message : String(e)); }
+    try {
+      for (const file of supported) {
+        if (controller.signal.aborted) return;
+        setImportStatus(`Indexing ${count + 1} of ${supported.length} · ${file.name}`);
+        try {
+          const group = folder ? `Folder: ${file.webkitRelativePath.split('/')[0]}` : 'Selected files';
+          const doc = await extractDocument(file, group, false, controller.signal);
+          if (controller.signal.aborted) return;
+          await storage.indexDocument(doc);
+          if (controller.signal.aborted) return;
+          originals.current.set(doc.id, file);
+          imported.push(doc);
+          const existing = nextDocs.findIndex(d => d.id === doc.id); if (existing >= 0) nextDocs[existing] = doc; else nextDocs.push(doc);
+          count++;
+        } catch (e) { if (controller.signal.aborted) return; errors.push(e instanceof Error ? e.message : String(e)); }
+      }
+      if (controller.signal.aborted) return;
+      if (folder && !errors.length && imported.length) {
+        const group = imported[0].group;
+        try { await storage.replaceGroup(group, imported); nextDocs = [...nextDocs.filter(d => d.group !== group), ...imported]; }
+        catch (e) { errors.push(`Folder snapshot could not be refreshed: ${String(e)}`); }
+      }
+      if (controller.signal.aborted) return;
+      setDocuments(nextDocs); setBusy(false); setImportStatus(`${count} file${count === 1 ? '' : 's'} indexed locally.${folder ? ' Folder access is a snapshot; reselect to refresh.' : ''}`);
+      if (errors.length) setError(errors.join('\n'));
+      if (fileInput.current) fileInput.current.value = ''; if (folderInput.current) folderInput.current.value = '';
+    } finally {
+      if (importJob.current === controller) { importJob.current = null; setBusy(false); }
     }
-    if (folder && !errors.length && imported.length) {
-      const group = imported[0].group;
-      try { await storage.replaceGroup(group, imported); nextDocs = [...nextDocs.filter(d => d.group !== group), ...imported]; }
-      catch (e) { errors.push(`Folder snapshot could not be refreshed: ${String(e)}`); }
-    }
-    setDocuments(nextDocs); setBusy(false); setImportStatus(`${count} file${count === 1 ? '' : 's'} indexed locally.${folder ? ' Folder access is a snapshot; reselect to refresh.' : ''}`);
-    if (errors.length) setError(errors.join('\n'));
-    if (fileInput.current) fileInput.current.value = ''; if (folderInput.current) folderInput.current.value = '';
   };
   const revoke = async (group: string) => {
     try { await storage.revokeGroup(group); setDocuments(old => old.filter(d => d.group !== group)); for (const [id] of originals.current) if (id.startsWith(`${group}:`)) originals.current.delete(id); }
@@ -345,6 +360,8 @@ export function App() {
   };
   const deleteAll = async () => {
     if (captureMeetingId) throw new Error('Stop the active meeting before deleting the workspace.');
+    deletingWorkspace.current = true;
+    importJob.current?.abort(); importJob.current = null; setBusy(false); setImportStatus('');
     try {
       for(const controller of reportJobs.current.values())controller.abort();
       if (isNative()) {await invoke('engine_clear_history');await invoke('delete_api_key');await invoke('delete_groq_key');await invoke('delete_deepgram_key');await invoke('delete_knowledge_key',{provider:'nvidia'});await invoke('delete_knowledge_key',{provider:'voyage'});}
@@ -352,6 +369,7 @@ export function App() {
       setAudioUrl(''); setAudioBlob(undefined);
       const next = { ...defaultSettings, onboarded: true }; await storage.saveSettings(next); setSettings(next); navigate('home'); setModal(null); setSelection(null);
     } catch (e) { setError(String(e)); throw e; }
+    finally { deletingWorkspace.current = false; }
   };
   const importAudio = (file: File | undefined) => {
     if (!file) return;
@@ -363,7 +381,7 @@ export function App() {
 
   const notesCanvas=!!meeting&&meeting.mode!=='demo'&&meeting.events.length===0;
 
-  if (fatal) return <main className="boot-screen"><Logo /><h1>Your workspace couldn’t open.</h1><p role="alert">{fatal}</p><p>Your saved data has not been reset. Check browser storage permissions, then reload.</p><button className="button primary" onClick={() => location.reload()}>Reload workspace</button></main>;
+  if (fatal) return <main className="boot-screen"><Logo /><h1>Your workspace couldn’t open.</h1><p role="alert">{fatal}</p><p>Your saved data has not been reset. Follow the message above, then reload.</p><button className="button primary" onClick={() => location.reload()}>Reload workspace</button></main>;
   if (!ready) return <main className="boot-screen"><Orb size="large" /><p>Opening your meetings…</p></main>;
 
   if(!settings.onboarded&&!demoRoute)return <MotionProvider reducedMotion={settings.reduceMotion?'always':'user'}><ReducedMotionConfig><Welcome quiet={settings.reduceMotion} onQuiet={reduceMotion=>changeSettings({...settings,reduceMotion})} onComplete={()=>changeSettings({...settings,onboarded:true})}/></ReducedMotionConfig></MotionProvider>;

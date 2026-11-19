@@ -1,6 +1,7 @@
 import sqlite3InitModule, { type Database, type Sqlite3Static } from '@sqlite.org/sqlite-wasm';
 import wasmUrl from '@sqlite.org/sqlite-wasm/sqlite3.wasm?url';
 import { readBytes, writeBytes } from './idb';
+import { acquireWorkspaceLock } from './workspace-lock';
 import { documentEvidenceChanged,indexDocument, loadState, migrate, replaceGroup, revokeGroup, saveMeeting, saveSettings, searchDocuments } from './sqlite';
 import type { IndexedDocument, Meeting } from '../meeting/model';
 
@@ -8,6 +9,7 @@ let sqlite: Sqlite3Static;
 let db: Database;
 let native = false;
 let ephemeral = false;
+let releaseWorkspace: (() => void) | undefined;
 let queue = Promise.resolve();
 self.onmessage = (message: MessageEvent<{ id: number; method: string; args: unknown[] }>) => {
   queue = queue.then(async () => {
@@ -20,6 +22,7 @@ self.onmessage = (message: MessageEvent<{ id: number; method: string; args: unkn
       if (method === 'init') {
         native = Boolean(args[0]);
         ephemeral = !native && args[2] === true;
+        if (!native && !ephemeral) releaseWorkspace = await acquireWorkspaceLock();
         // Emscripten accepts locateFile; the package's zero-argument TS declaration omits it.
         const initialize = sqlite3InitModule as unknown as (options: { locateFile(file: string): string; print(): void; printErr(): void }) => Promise<Sqlite3Static>;
         sqlite = await initialize({ locateFile: file => file.endsWith('.wasm') ? wasmUrl : file, print: () => {}, printErr: () => {} });
@@ -54,6 +57,9 @@ self.onmessage = (message: MessageEvent<{ id: number; method: string; args: unkn
         if (!native) { await writeBytes(bytes); bytes = undefined; }
       }
       self.postMessage({ id, result, bytes,knowledgeRoots:[...new Set(knowledgeRoots)],clearKnowledge });
-    } catch (error) { self.postMessage({ id, error: error instanceof Error ? error.message : 'Local storage failed' }); }
+    } catch (error) {
+      if (method === 'init') { releaseWorkspace?.(); releaseWorkspace = undefined; }
+      self.postMessage({ id, error: error instanceof Error ? error.message : 'Local storage failed' });
+    }
   });
 };
