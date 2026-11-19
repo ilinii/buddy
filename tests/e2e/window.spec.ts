@@ -14,6 +14,8 @@ test('compact glass library keeps recording and review clear at desktop and phon
   }
 });
 
+test.describe('Windows caption IPC simulation', () => {
+test.use({userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'});
 test('Windows caption controls dispatch native actions and reflect maximize state', async ({page}) => {
   // Simulates IPC only. The packaged-window smoke checks real Windows behavior separately.
   await page.addInitScript(() => {
@@ -64,4 +66,5 @@ test('Windows caption controls dispatch native actions and reflect maximize stat
   expect(calls.filter(value => value === 'plugin:window|toggle_maximize')).toHaveLength(2);
   expect(calls).toContain('plugin:window|minimize');
   expect(calls).toContain('plugin:window|close');
+});
 });

@@ -1,5 +1,11 @@
 # Testing and capability limits
 
+## PR #5 CI test corrections (19 November 2026)
+
+The first hosted shared-UI run passed 115/118 browser workflows. Its three failures came from test setup/readiness assumptions: the Windows caption IPC fixture inherited the Linux runner user agent; the deletion helper checked `dialog` instead of the actual `alertdialog` and could reload before the final settings save; graph nodes were counted before React Flow made them visible and focusable.
+
+The caption fixture now explicitly uses a Windows browser identity. Deletion waits for its named alert dialog to close, and the regression deliberately holds the real final settings write to verify confirmation stays pending. Graph coverage waits for a visible node, checks its focus/outline with retrying assertions, and verifies keyboard Tab traversal to the next node. All four affected desktop/phone cases passed three repetitions (12/12); TypeScript, 64 unit tests and the production build passed. These changes modify tests and documentation only; no assertions are skipped and no production behavior is changed. See PR #5 checks for hosted validation of the updated revision.
+
 ## Workspace privacy and concurrency regressions (19 November 2026)
 
 - Issues #2–#4: cancellable document batches across workspace deletion; assistant cancellation on provider/model/text/file-permission changes; exclusive browser workspace ownership before SQLite restoration. No Windows hardware/install acceptance is implied.

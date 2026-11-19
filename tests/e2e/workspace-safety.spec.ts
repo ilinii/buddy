@@ -11,11 +11,13 @@ async function note(page: Page, title: string) {
   await expect(page.getByText(/^(Saved locally|Demo changes only)$/)).toBeVisible();
 }
 async function deleteWorkspace(page: Page) {
-  await page.getByRole('button', { name: 'Open settings', exact: true }).click();
+  await page.getByRole('button', { name: (page.viewportSize()?.width ?? 1440) <= 600 ? 'Settings' : 'Open settings', exact: true }).click();
   await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button', { name: 'Privacy', exact: true }).click();
   await page.getByRole('button', { name: 'Delete all workspace data', exact: true }).click();
-  await page.getByRole('button', { name: 'Delete all data', exact: true }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const confirmation = page.getByRole('alertdialog', { name: 'Delete this workspace?' });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole('button', { name: 'Delete all data', exact: true }).click();
+  await expect(confirmation).toBeHidden();
 }
 test('a second tab is blocked before restoration; closing the owner allows safe reload', async ({ page, context }) => {
   await enter(page);
@@ -58,11 +60,20 @@ for (const width of [1440, 390]) test(`deletion cancels pending extraction and t
   await page.setViewportSize({ width, height: 900 });
   await page.addInitScript(() => {
     const NativeWorker = window.Worker;
-    const state = { pending: false, created: 0, terminated: 0, release: () => {} };
+    const state = { pending: false, saving: false, created: 0, terminated: 0, release: () => {}, releaseSave: () => {} };
     Object.assign(window, { importAudit: state });
     window.Worker = class extends NativeWorker {
       constructor(url: string | URL, options?: WorkerOptions) {
         super(url, options);
+        if (String(url).includes('storage.worker')) {
+          const post = this.postMessage.bind(this);
+          this.postMessage = (message: {method?: string}, options?: StructuredSerializeOptions | Transferable[]) => {
+            const send = () => { if (Array.isArray(options)) post(message, options); else post(message, options); };
+            // Hold the real settings save: deletion must remain pending until it is durable.
+            if (message.method === 'saveSettings') { state.saving = true; state.releaseSave = send; }
+            else send();
+          };
+        }
         if (!String(url).includes('parser.worker')) return;
         Object.defineProperty(this, 'onmessage', { set: (callback: (event: MessageEvent) => void) => {
           this.addEventListener('message', event => {
@@ -87,14 +98,13 @@ for (const width of [1440, 390]) test(`deletion cancels pending extraction and t
     { name: 'next.txt', mimeType: 'text/plain', buffer: Buffer.from('Must not import after deletion.') },
   ]);
   await page.waitForFunction(() => (window as unknown as {importAudit:{pending:boolean}}).importAudit.pending);
-  // Mobile uses the phone navigation label.
-  if (width < 600) {
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
-    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button', { name: 'Privacy', exact: true }).click();
-    await page.getByRole('button', { name: 'Delete all workspace data', exact: true }).click();
-    await page.getByRole('button', { name: 'Delete all data', exact: true }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-  } else await deleteWorkspace(page);
+  let deletionFinished = false;
+  const deletion = deleteWorkspace(page).then(() => { deletionFinished = true; });
+  await page.waitForFunction(() => (window as unknown as {importAudit:{saving:boolean}}).importAudit.saving);
+  expect(deletionFinished).toBe(false);
+  await expect(page.getByRole('alertdialog', { name: 'Delete this workspace?' }).getByRole('button', { name: 'Deleting…', exact: true })).toBeDisabled();
+  await page.evaluate(() => (window as unknown as {importAudit:{releaseSave():void}}).importAudit.releaseSave());
+  await deletion;
   await page.evaluate(() => (window as unknown as {importAudit:{release():void}}).importAudit.release());
   const batch = await page.evaluate(() => (window as unknown as {importAudit:{created:number;terminated:number}}).importAudit);
   expect(batch.created).toBe(1); expect(batch.terminated).toBeGreaterThan(0);

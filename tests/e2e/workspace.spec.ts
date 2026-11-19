@@ -115,8 +115,16 @@ test('keyboard-safe settings and graph navigation', async ({ page }) => {
   await page.getByRole('button', { name: 'Open sample meeting' }).click();
   await page.getByRole('button', { name: 'Graph', exact: true }).click();
   await expect(page.locator('.react-flow__node')).toHaveCount(9);
-  await page.locator('.react-flow__node').first().focus();
-  expect(await page.locator('.react-flow__node').first().evaluate(node => getComputedStyle(node).outlineStyle)).toBe('solid');
+  const firstNode = page.locator('.react-flow__node').first();
+  // React Flow mounts nodes hidden until measurement; DOM count alone is not readiness.
+  await expect(firstNode).toBeVisible();
+  await firstNode.focus();
+  await expect(firstNode).toBeFocused();
+  await expect(firstNode).toHaveCSS('outline-style', 'solid');
+  await firstNode.press('Tab');
+  const nextNode = page.locator('.react-flow__node').nth(1);
+  await expect(nextNode).toBeFocused();
+  await expect(nextNode).toHaveCSS('outline-style', 'solid');
   await page.locator('.react-flow__node').filter({ hasText: 'Prioritize onboarding' }).click();
   await expect(page.getByRole('dialog')).toContainText('Developed from');
 });
