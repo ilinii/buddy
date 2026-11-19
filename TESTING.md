@@ -1,5 +1,19 @@
 # Testing and capability limits
 
+## PR #5 CI test corrections (19 November 2026)
+
+The first hosted shared-UI run passed 115/118 browser workflows. Its three failures came from test setup/readiness assumptions: the Windows caption IPC fixture inherited the Linux runner user agent; the deletion helper checked `dialog` instead of the actual `alertdialog` and could reload before the final settings save; graph nodes were counted before React Flow made them visible and focusable.
+
+The caption fixture now explicitly uses a Windows browser identity. Deletion waits for its named alert dialog to close, and the regression deliberately holds the real final settings write to verify confirmation stays pending. Graph coverage waits for a visible node, checks its focus/outline with retrying assertions, and verifies keyboard Tab traversal to the next node. All four affected desktop/phone cases passed three repetitions (12/12); TypeScript, 64 unit tests and the production build passed. These changes modify tests and documentation only; no assertions are skipped and no production behavior is changed. See PR #5 checks for hosted validation of the updated revision.
+
+## Workspace privacy and concurrency regressions (19 November 2026)
+
+- Issues #2–#4: cancellable document batches across workspace deletion; assistant cancellation on provider/model/text/file-permission changes; exclusive browser workspace ownership before SQLite restoration. No Windows hardware/install acceptance is implied.
+- `npm run check`, **64 unit tests**, production build and the tracked-source publication guard passed. The build retains its existing large-chunk advisory.
+- All **15 focused Playwright workflows** in `knowledge.spec.ts` and `workspace-safety.spec.ts` passed. They cover permission revocation with deliberately late simulated native replies, safe second-tab rejection and owner-close handover, delete/save ordering, showcase isolation, and delayed real parser-worker results/batch cancellation at 1440 and 390 px. The deletion and tab-lock screens were visually inspected at both widths. No real provider, credential or physical audio was used.
+- Full Playwright run: **117 passed, 1 failed** (6.3 minutes). The existing meeting-matrix screenshot check lost visibility of its canvas during reduced-motion capture. All **13 presence and workspace-safety workflows passed on rerun** (46.9 seconds), including that check. No matrix implementation/test was changed for the retry.
+- Windows `cargo fmt --check`, `cargo check`, **55 native tests (5 opt-in fixtures ignored)** and `cargo check --features check-macos-bridge` passed. The new Gemini HTTP fixture cancels during a 429 backoff and confirms only one request reaches its localhost server. Sandboxed debug/release checks initially failed in the unchanged Whisper CMake probe with MSVC C1902; the debug check/tests passed with the compiler's local IPC available. The existing incremental hard-link fallback warning remains. The Mac bridge feature checks Rust ABI on Windows, not Apple frameworks; actual macOS/iPhone SDK checks were unavailable on this host.
+
 ```sh
 npm run check
 npm test

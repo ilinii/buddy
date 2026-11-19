@@ -15,6 +15,8 @@ npm run dev
 
 Open http://localhost:1420. No account or API key is required for the browser workspace, sample replay, personal notes and local source search. Browser microphone recording is audio-only; it never invents a transcript.
 
+The persistent browser workspace opens in one tab at a time. Close the owning tab before reloading another. Browsers must support Web Locks over HTTPS or localhost; the sample website showcase remains independent and ephemeral.
+
 ## What Buddy does
 
 - Records microphone audio and, in supported desktop builds, selected computer audio.

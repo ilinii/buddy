@@ -2,7 +2,7 @@ import {test,expect,type Page} from '@playwright/test';
 // UI/IPC simulation only. Live provider acceptance is a separate opt-in native script.
 async function transport(page:Page){await page.addInitScript(()=>{
  const callbacks=new Map<number,(v:unknown)=>void>(),listeners=new Map<string,number[]>();let id=0;
- const state={requests:[] as Record<string,unknown>[],calls:[] as string[],hold:false,invalid:false,release:()=>{},cancel:()=>{}};
+ const state={requests:[] as Record<string,unknown>[],calls:[] as string[],hold:false,invalid:false,ignoreCancel:false,completed:0,release:()=>{},cancel:()=>{}};
  Object.assign(window,{knowledgeMock:state});
  const internals={transformCallback(fn:(v:unknown)=>void){callbacks.set(++id,fn);return id;},unregisterCallback(key:number){callbacks.delete(key);},async invoke(command:string,args:Record<string,unknown>={}){
   state.calls.push(command);
@@ -15,11 +15,13 @@ async function transport(page:Page){await page.addInitScript(()=>{
   if(command==='engine_models')return [];if(command==='has_api_key')return false;
   if(command==='knowledge_key_status')return {nvidia:true,voyage:true};
   if(['set_knowledge_key','delete_knowledge_key','clear_knowledge_index','invalidate_knowledge_roots'].includes(command)){if(command==='invalidate_knowledge_roots')state.cancel();return;}
-  if(command==='knowledge_cancel'){state.cancel();return;}
-  if(command==='knowledge_answer'){
-   const request=args.request as {requestId:string;sources:{id:string;text:string}[];forceRetrieval:boolean;model:string};state.requests.push(structuredClone(request));
+  if(command==='knowledge_cancel'||command==='cancel_gemini'){if(!state.ignoreCancel)state.cancel();return;}
+  if(command==='knowledge_answer'||command==='ask_gemini'){
+   const request=(command==='ask_gemini'?args:args.request) as {requestId:string;sources:{id:string;text:string}[];forceRetrieval:boolean;model:string};state.requests.push(structuredClone(request));
    for(const callback of listeners.get('knowledge-progress')??[])callbacks.get(callback)?.({payload:{requestId:request.requestId,phase:'waiting',detail:'Voyage rate limit - retrying in 1 s'}});
    await new Promise<void>((resolve,reject)=>{state.release=resolve;state.cancel=()=>reject(Error('Request cancelled or sources changed'));if(!state.hold)setTimeout(resolve,80);});
+   state.completed++;
+   if(command==='ask_gemini')return JSON.stringify({answer:'Alex sends the brief Friday.',sourceIds:[request.sources[0].id]});
    const selected=request.sources.slice(0,8).map(s=>s.id);return {text:'Alex sends the brief Friday. [S1]',sourceIds:[state.invalid?'invented-evidence':selected[0]],selected,route:request.forceRetrieval?'hybrid':'focused-context',model:request.model,embedded:0,cacheHits:selected.length,warnings:[],embeddingModel:'voyage-4-large',rerankModel:'rerank-3'};
   }
   throw Error(`Unexpected knowledge mock command ${command}`);
@@ -45,6 +47,50 @@ for(const width of [1440,390])test(`automatic meeting context, real progress and
  await ask(page);await expect.poll(()=>mock(page,'window.knowledgeMock.requests.length')).toBe(2);expect(await mock(page,'window.knowledgeMock.requests[1].forceRetrieval')).toBe(true);
  await page.getByRole('button',{name:'Cancel request',exact:true}).click();await expect(page.getByRole('alert')).toContainText('cancelled');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`output/knowledge-cancel-${width}.png`});
+});
+
+for (const permission of ['Allow selected text to NVIDIA', 'Allow selected text to Voyage', 'Use imported files in cloud answers', 'Provider']) {
+ test(`changing ${permission} cancels an active answer and discards a late result`, async ({page}) => {
+  await setup(page);
+  const openSettings = async () => {
+   await page.getByRole('button',{name:'Open settings',exact:true}).click();
+   await page.getByRole('navigation',{name:'Settings sections'}).getByRole('button',{name:'AI provider',exact:true}).click();
+  };
+  if(permission==='Use imported files in cloud answers') {
+   await openSettings();await page.getByRole('checkbox',{name:permission,exact:true}).check();await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+  }
+  await mock(page,'window.knowledgeMock.hold=true;window.knowledgeMock.ignoreCancel=true');await ask(page);
+  await expect(page.locator('.thinking')).toContainText('Waiting to continue');await openSettings();
+  if(permission==='Provider')await page.getByRole('combobox',{name:'Provider',exact:true}).selectOption('offline');
+  else await page.getByRole('checkbox',{name:permission,exact:true}).uncheck();
+  await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+  await expect.poll(()=>mock(page,'window.knowledgeMock.calls.filter(c=>c==="knowledge_cancel").length')).toBe(1);
+  await expect(page.getByRole('alert')).toContainText('Content already sent cannot be recalled');
+  await mock(page,'window.knowledgeMock.release()');await expect.poll(()=>mock(page,'window.knowledgeMock.completed')).toBe(1);
+  await expect(page.locator('.chat-assistant')).toHaveCount(0);await expect(page.locator('.thinking')).toHaveCount(0);
+  if(permission!=='Provider') {
+   await openSettings();await page.getByRole('checkbox',{name:permission,exact:true}).check();await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+  }
+  await mock(page,'window.knowledgeMock.hold=false');await ask(page);await expect(page.locator('.chat-assistant')).toHaveCount(1);
+ });
+}
+
+test('revoking Gemini permission propagates native cancellation and discards a late response', async ({page}) => {
+ await setup(page);
+ await page.getByRole('button',{name:'Open settings',exact:true}).click();
+ await page.getByRole('navigation',{name:'Settings sections'}).getByRole('button',{name:'AI provider',exact:true}).click();
+ await page.getByRole('combobox',{name:'Provider',exact:true}).selectOption('gemini');
+ await page.getByRole('checkbox',{name:'Allow meeting excerpts to Gemini',exact:true}).check();
+ await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+ await mock(page,'window.knowledgeMock.hold=true;window.knowledgeMock.ignoreCancel=true');await ask(page);
+ await expect.poll(()=>mock(page,'window.knowledgeMock.requests.length')).toBe(1);
+ await page.getByRole('button',{name:'Open settings',exact:true}).click();
+ await page.getByRole('navigation',{name:'Settings sections'}).getByRole('button',{name:'AI provider',exact:true}).click();
+ await page.getByRole('checkbox',{name:'Allow meeting excerpts to Gemini',exact:true}).uncheck();
+ await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+ await expect.poll(()=>mock(page,'window.knowledgeMock.calls.filter(c=>c==="cancel_gemini").length')).toBe(1);
+ await mock(page,'window.knowledgeMock.release()');await expect.poll(()=>mock(page,'window.knowledgeMock.completed')).toBe(1);
+ await expect(page.locator('.chat-assistant')).toHaveCount(0);
 });
 test('unconsented requests never reach the native provider; fabricated citations are rejected',async({page})=>{
  await setup(page,false);await ask(page);await expect(page.getByRole('alert')).toContainText('Allow selected text to NVIDIA');expect(await mock(page,'window.knowledgeMock.requests.length')).toBe(0);

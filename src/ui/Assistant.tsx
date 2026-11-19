@@ -25,6 +25,13 @@ export function Assistant({ meeting, settings, draft, onDraftApplied, onExplore,
   const abort = useRef<AbortController | undefined>(undefined);
   const scroll = useRef<HTMLDivElement>(null);
   useEffect(() => () => abort.current?.abort(), []);
+  useEffect(() => {
+    if (!abort.current) return;
+    abort.current.abort(); abort.current = undefined;
+    setBusy(false); setAiState('error');
+    setError('Request cancelled because AI settings changed. Content already sent cannot be recalled.');
+  }, [settings.provider, settings.cloudConsent, settings.nvidiaConsent, settings.voyageConsent,
+    settings.cloudLibraryConsent, settings.model, settings.nvidiaModel]);
   useEffect(() => { scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' }); }, [messages, busy]);
   const ask = async (question: string) => {
     if (!question.trim() || busy) return;
