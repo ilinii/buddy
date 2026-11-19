@@ -1,5 +1,11 @@
 # Testing and capability limits
 
+## Windows runner cache correction (20 November 2026)
+
+The post-merge main run `44626951165` failed before Buddy Rust checking: Whisper's restored CMake configuration referenced MSVC `14.51.36231` as its assembler, while the runner's current C/C++ compiler was `14.52.37025`. CMake rejected the old path because it no longer existed. The PR #5 checks had passed on their runners; the merged run independently exposed a machine-specific native build cache.
+
+Verification and packaging workflows now disable Rust target-directory caching on Windows through the action's supported `cache-targets` input. Cargo registry downloads remain cached; Windows native outputs are rebuilt on the current image and reused within the job. Mac target caching is unchanged. This changes CI configuration only, not application code or the physical-device/install acceptance requirements in issue #1. Hosted verification of the follow-up revision is reported in its PR checks.
+
 ## PR #5 CI test corrections (19 November 2026)
 
 The first hosted shared-UI run passed 115/118 browser workflows. Its three failures came from test setup/readiness assumptions: the Windows caption IPC fixture inherited the Linux runner user agent; the deletion helper checked `dialog` instead of the actual `alertdialog` and could reload before the final settings save; graph nodes were counted before React Flow made them visible and focusable.
