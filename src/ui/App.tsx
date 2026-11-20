@@ -191,14 +191,14 @@ export function App() {
   const meeting = meetings.find(m => m.id === selectedId);
   const activeMeeting = meetings.find(m => m.id === captureMeetingId);
   function persist(next: Meeting) {
-    if(deletingMeetings.current.has(next.id))return;
+    if(deletingWorkspace.current||deletingMeetings.current.has(next.id))return;
     const updated = meetingRef.current.some(m => m.id === next.id) ? meetingRef.current.map(m => m.id === next.id ? next : m) : [next, ...meetingRef.current];
     meetingRef.current = updated; setMeetings(updated); setSaveState('Saving…'); saveCount.current++;
     void storage.saveMeeting(next).then(() => { saveCount.current--; if (!saveCount.current) setSaveState('Saved locally'); }).catch(e => { saveCount.current--; setSaveState('Save failed'); setError(String(e)); });
   }
   async function generateReport(id:string,force=false){
     const source=meetingRef.current.find(m=>m.id===id);
-    if(deletingMeetings.current.has(id)||!source||source.mode==='demo'||reportJobs.current.has(id)||['live','paused'].includes(source.status))return;
+    if(deletingWorkspace.current||deletingMeetings.current.has(id)||!source||source.mode==='demo'||reportJobs.current.has(id)||['live','paused'].includes(source.status))return;
     const controller=new AbortController();reportJobs.current.set(id,controller);
     const ownsJob=()=>reportJobs.current.get(id)===controller;
     const snapshot=reportInput(source),configuration=settingsRef.current,provider=reportProvider(configuration,isNative(),isIOS());
@@ -388,12 +388,17 @@ export function App() {
     deletingWorkspace.current = true;
     importJob.current?.abort(); importJob.current = null; setBusy(false); setImportStatus('');
     try {
-      for(const controller of reportJobs.current.values())controller.abort();
+      const jobs=[...reportJobs.current.values()];reportJobs.current.clear();
+      for(const controller of jobs)controller.abort();
       if (isNative()) {await invoke('engine_clear_history');await invoke('delete_api_key');await invoke('delete_groq_key');await invoke('delete_deepgram_key');await invoke('delete_knowledge_key',{provider:'nvidia'});await invoke('delete_knowledge_key',{provider:'voyage'});}
       await storage.clearAll(); meetingRef.current = []; setMeetings([]); setDocuments([]); originals.current.clear();
       setAudioUrl(''); setAudioBlob(undefined);
       const next = { ...defaultSettings, onboarded: true }; await storage.saveSettings(next); setSettings(next); navigate('home'); setModal(null); setSelection(null);
-    } catch (e) { setError(String(e)); throw e; }
+    } catch (e) {
+      deletingWorkspace.current=false;
+      for(const current of meetingRef.current)if(current.report?.status==='running')persist({...current,report:{...current.report,status:'failed',message:'Report cancelled while deleting. Your saved transcript and personal notes are intact. Retry the report or delete again.',updatedAt:new Date().toISOString()}});
+      setError(String(e));throw e;
+    }
     finally { deletingWorkspace.current = false; }
   };
   const importAudio = (file: File | undefined) => {
