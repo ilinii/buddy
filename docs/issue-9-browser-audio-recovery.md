@@ -1,0 +1,9 @@
+# Issue #9: interrupted browser audio
+
+Browser recording now has a single completion promise registered before MediaRecorder starts. Normal Finish, recorder error, track disconnect and size-limit handling share that drain. An automatic recorder error may already set state to inactive; stop still waits for final dataavailable/stop events instead of dropping those bytes. Recorder identity guards reject callbacks from a previous capture. Tracks, audio context, animation and chunks are released when completion arrives.
+
+App finalization now offers the captured blob when browser audio retention is enabled, preserves personal notes, and marks a fault interrupted even if it happens while Finish is draining. Retention remains off by default. Browser audio is offered for download during the current app session, not persisted in SQLite or recovered after reload. No transcript is fabricated.
+
+Verified on Windows with Chrome on 20 November 2026: TypeScript, 71 unit tests and the production build passed; the existing bundle-size advisory remains. Seven new unit tests cover final-chunk draining, an already-inactive error, a fault during Finish, the 100 MB bound, stale callbacks, unsolicited stop and setup cleanup. Six new Playwright cases use the real browser MediaRecorder with fake microphone input and injected disconnect/error events: desktop/phone recovery, playable nonempty audio, saved notes and interrupted status after reload, no invented transcript, Finish/disconnect ordering, retention disabled and normal Finish. Recovery UI was visually inspected at 1440/390 px. Fifteen existing notes/recording-control workflows also passed.
+
+No native Rust implementation changed, no physical microphone was accessed and no cloud request was made. A physical unplug and clean Windows packaged installation remain manual acceptance checks. Hosted platform/build checks are attached to the PR.
