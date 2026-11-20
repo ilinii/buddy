@@ -280,12 +280,11 @@ export function App() {
           if(attempt.controller.signal.aborted)return;
           const session=await engine.start(m.id,recordingSettings);engineSession.current=session.sessionId;
           Object.assign(m,mergeEngineSession(meetingRef.current.find(item=>item.id===m.id)??m,session));setEnginePhase('live');
-        }else {browserCaptureId.current=m.id;await capture.current.start(settings.deviceId);if(targetId)Object.assign(m,{...(meetingRef.current.find(note=>note.id===targetId)??m),kind:'note',mode,status:'live'});}
+        }else {browserCaptureId.current=m.id;try{await capture.current.start(settings.deviceId);}catch(error){browserCaptureId.current=null;throw error;}if(targetId)Object.assign(m,{...(meetingRef.current.find(note=>note.id===targetId)??m),kind:'note',mode,status:'live'});}
       }
       startingCapture.current=false;persist(m);if(targetId){setInlineCaptureId(null);focusNoteEditor();}else openMeeting(m,undefined,mode==='manual');setModal(null);setNewTitle('');setConsent(false);
       if (mode !== 'manual') { setCaptureMeetingId(m.id); setShowAssistant(false); }
-      if(mode==='microphone'&&!isNative()&&capture.current.error)void finishBrowserRecording(m.id);
-    } catch (e) {if(!isNative())browserCaptureId.current=null;if(targetId&&!engineSession.current){const latest=meetingRef.current.find(note=>note.id===targetId);if(latest?.mode==='microphone'&&!latest.segments.length)persist({...latest,mode:'manual',status:'ready'});}if(!attempt.controller.signal.aborted){setPreparationFailed(preparing);setError(`${preparing?'Could not prepare local transcription':'Could not start recording'}: ${e instanceof Error?e.message:String(e)}`);} }
+    } catch (e) {if(targetId&&!engineSession.current){const latest=meetingRef.current.find(note=>note.id===targetId);if(latest?.mode==='microphone'&&!latest.segments.length)persist({...latest,mode:'manual',status:'ready'});}if(!attempt.controller.signal.aborted){setPreparationFailed(preparing);setError(`${preparing?'Could not prepare local transcription':'Could not start recording'}: ${e instanceof Error?e.message:String(e)}`);} }
     finally {startingCapture.current=false;if(prepareAttempt.current?.id===attempt.id){prepareAttempt.current=null;setPreparation(null);setBusy(false);} }
   };
   async function finishBrowserRecording(id:string){
