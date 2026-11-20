@@ -5,6 +5,7 @@ import {nativeTransport} from './support/native-transport';
 type Audit={pending:boolean;held:boolean;returned:boolean;releaseReport():void;releaseDelete():void};
 async function prepare(page:Page,reject=false,failDelete=false){
   await nativeTransport(page);await page.goto('/?demo=home');
+  await expect(page.getByRole('button',{name:'Take notes',exact:true})).toBeVisible();
   await page.evaluate(async()=>{
     const storageUrl='/src/storage/service.ts';
     const {storage}=await import(/* @vite-ignore */ storageUrl) as typeof import('../../src/storage/service');
@@ -15,7 +16,7 @@ async function prepare(page:Page,reject=false,failDelete=false){
     meeting.segments=[{id:'saved-final',start:1,end:7,text:'Review the proposal on Friday.',channel:'microphone',final:true}];
     meeting.report={status:'failed',provider:'nvidia',message:'Retry this saved report.',inputHash:'',updatedAt:new Date().toISOString()};
     await storage.saveMeeting(meeting);
-    const state=await storage.init();await storage.saveSettings({...state.settings,onboarded:true,provider:'nvidia',nvidiaConsent:true});
+    const state=await storage.load();await storage.saveSettings({...state.settings,onboarded:true,provider:'nvidia',nvidiaConsent:true});
   });
   await page.reload();await page.getByRole('button',{name:'Open Report deletion regression',exact:true}).click();
   await page.getByRole('textbox',{name:'Meeting notes editor',exact:true}).fill('Keep my personal notes.');
