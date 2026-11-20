@@ -1,0 +1,9 @@
+# Issue #8: active cloud audio permission
+
+Settings changes now check the running session's provider/model provenance. Revoking that provider's audio permission, disabling transcription or selecting a different provider requests engine_stop with cancelTranscription=true immediately. This also escalates an ordinary Finish already draining speech. Restored/starting sessions are checked when their native snapshot arrives. Already finalized speech and personal notes are preserved; the recording ends as interrupted. Settings explain that already sent audio cannot be recalled. Local speech sessions remain local and are not stopped by unrelated cloud permission changes.
+
+The existing native cancellation control closes Deepgram streams and cancels Groq uploads; no Rust implementation changed. A failed stop is shown visibly and can be retried with Finish. The UI does not claim cancellation can recall data already delivered to a provider.
+
+Verified on Windows with Chrome on 20 November 2026: TypeScript, 64 unit tests and production build passed (existing bundle-size advisory remains). All 22 existing engine.spec.ts workflows passed. All eight new speech-consent.spec.ts cases passed after correcting the test selectors for the actual Pause meeting button and phone Settings navigation. Coverage includes both providers, live/paused sessions, persisted revocation and evidence, provider/transcription changes, escalation while Finish is waiting, and a local-session negative control. Settings were visually inspected at 1440 and 390 px.
+
+These tests simulate native IPC and do not send audio or credentials to a provider. They do not verify physical devices, production network cancellation latency, or clean Windows packaged installation. Hosted platform/build checks are attached to the PR. Existing engine.spec.ts cases verify that future cloud starts require separate permission and a native credential.
