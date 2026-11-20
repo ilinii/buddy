@@ -4,9 +4,10 @@ import {nativeTransport} from './support/native-transport';
 type Audit={stops:boolean[];normalHeld:boolean;releaseNormal():void};
 async function record(page:Page,provider:'deepgram'|'groq'|'local',holdFinish=false){
   await nativeTransport(page);await page.goto('/?demo=home');
+  await expect(page.getByRole('button',{name:'Take notes',exact:true})).toBeVisible();
   await page.evaluate(async provider=>{
     const url='/src/storage/service.ts';const {storage}=await import(/* @vite-ignore */ url) as typeof import('../../src/storage/service');
-    const {settings}=await storage.init();await storage.saveSettings({...settings,onboarded:true,speechProvider:provider,localTranscription:true,deepgramAudioConsent:true,groqAudioConsent:true});
+    const {settings}=await storage.load();await storage.saveSettings({...settings,onboarded:true,speechProvider:provider,localTranscription:true,deepgramAudioConsent:true,groqAudioConsent:true});
   },provider);
   await page.reload();
   await page.evaluate(holdFinish=>{
