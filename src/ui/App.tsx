@@ -124,6 +124,9 @@ export function App() {
   const [transcriptSearch, setTranscriptSearch] = useState('');
   const capture = useRef(new MicrophoneCapture());
   const engineSession=useRef<string|null>(null);
+  const activeNativeSession=useRef<EngineSession|null>(null);
+  const speechCancellation=useRef<string|null>(null);
+  const revokedCloudSession=useRef<string|null>(null);
   const startingCapture=useRef(false);
   const [enginePhase,setEnginePhase]=useState('');
   const [interimCaptions,setInterimCaptions]=useState<Record<string,Segment>>({});
@@ -147,8 +150,11 @@ export function App() {
     meetingRef.current = state.meetings; setMeetings(state.meetings); setSettings(state.settings); setDocuments(state.documents); setSelectedId(state.meetings[0]?.id ?? ''); setReady(true);
   }).catch(e => { if (mounted) setFatal(e instanceof Error ? e.message : String(e)); }); return () => { mounted = false; }; }, []);
   function applyNative(session:EngineSession){
+    if(session.sessionId===revokedCloudSession.current&&session.status==='complete')session={...session,status:'interrupted'};
     const terminal=['complete','interrupted'].includes(session.status);
     if((engineSession.current&&engineSession.current!==session.sessionId)||(!terminal&&terminalSessions.current.has(session.sessionId))||(session.sequence!==undefined&&session.sequence<(engineSequences.current.get(session.sessionId)??0)))return;
+    activeNativeSession.current=terminal?null:session;
+    if(!terminal)enforceCloudAudioPermission(session,settingsRef.current);
     if(terminal){terminalSessions.current.add(session.sessionId);setInterimCaptions({});setStreamHealth({});}
     if(session.sequence!==undefined)engineSequences.current.set(session.sessionId,session.sequence);
     const current=meetingRef.current.find(m=>m.id===session.meetingId);if(!current)return;persist(mergeEngineSession(current,session));if(terminal&&!reportedSessions.current.has(session.sessionId)){reportedSessions.current.add(session.sessionId);void generateReport(session.meetingId);}if(['complete','interrupted'].includes(session.status)){setCaptureMeetingId(id=>id===session.meetingId?null:id);engineSession.current=null;setEnginePhase('');}else{engineSession.current=session.sessionId;setCaptureMeetingId(session.meetingId);setEnginePhase(session.status);}}
@@ -242,8 +248,26 @@ export function App() {
   }
   useEffect(()=>{for(const controller of reportJobs.current.values())controller.abort();},[settings.provider,settings.nvidiaConsent,settings.nvidiaModel,settings.localNoteModel]);
   useEffect(()=>()=>{for(const controller of reportJobs.current.values())controller.abort();},[]);
+  function enforceCloudAudioPermission(session:EngineSession,next:AppSettings){
+    if(!session.transcribing||['complete','interrupted'].includes(session.status))return;
+    // The provider belongs to the running native session, not the newly selected setting.
+    const provider=session.model?.startsWith('deepgram/')?'deepgram':session.model?.startsWith('groq/')?'groq':null;
+    if(!provider)return;
+    const allowed=next.localTranscription&&next.speechProvider===provider&&(provider==='deepgram'?next.deepgramAudioConsent:next.groqAudioConsent);
+    if(allowed||speechCancellation.current===session.sessionId)return;
+    speechCancellation.current=session.sessionId;revokedCloudSession.current=session.sessionId;
+    stoppingCapture.current=true;setBusy(true);setEnginePhase('finalizing');
+    setError('Stopping cloud transcription because its audio permission or transcription setting changed. Already sent audio cannot be recalled. Saved speech and personal notes are kept.');
+    // Escalate even when a normal Finish is draining: cancel=true closes streams
+    // and cancels in-flight uploads rather than sending the remaining audio.
+    void engine.stop(session.sessionId,true).then(applyNative).catch(error=>setError(`Could not stop cloud transcription: ${String(error)}. Use Finish to retry stopping the recording.`)).finally(()=>{
+      if(speechCancellation.current===session.sessionId){speechCancellation.current=null;stoppingCapture.current=false;setBusy(false);}
+    });
+  }
   const changeSettings = (next: AppSettings) => {
-    setSettings(next); void storage.saveSettings(next).catch(e => setError(`Settings were not saved: ${String(e)}`));
+    settingsRef.current=next;setSettings(next);
+    if(activeNativeSession.current)enforceCloudAudioPermission(activeNativeSession.current,next);
+    void storage.saveSettings(next).catch(e => setError(`Settings were not saved: ${String(e)}`));
   };
   useEffect(() => {
     if (!captureMeetingId) return;
@@ -302,14 +326,15 @@ export function App() {
         if(isNative()){
           m.status='interrupted';persist(m);await storage.saveMeeting(m);await engineListener.current;
           if(attempt.controller.signal.aborted)return;
-          const session=await engine.start(m.id,recordingSettings);engineSession.current=session.sessionId;
+          const session=await engine.start(m.id,recordingSettings);engineSession.current=session.sessionId;activeNativeSession.current=session;
           Object.assign(m,mergeEngineSession(meetingRef.current.find(item=>item.id===m.id)??m,session));setEnginePhase('live');
         }else {await capture.current.start(settings.deviceId);if(targetId)Object.assign(m,{...(meetingRef.current.find(note=>note.id===targetId)??m),kind:'note',mode,status:'live'});}
       }
       startingCapture.current=false;persist(m);if(targetId){setInlineCaptureId(null);focusNoteEditor();}else openMeeting(m,undefined,mode==='manual');setModal(null);setNewTitle('');setConsent(false);
       if (mode !== 'manual') { setCaptureMeetingId(m.id); setShowAssistant(false); }
+      if(activeNativeSession.current)enforceCloudAudioPermission(activeNativeSession.current,settingsRef.current);
     } catch (e) {if(targetId&&!engineSession.current){const latest=meetingRef.current.find(note=>note.id===targetId);if(latest?.mode==='microphone'&&!latest.segments.length)persist({...latest,mode:'manual',status:'ready'});}if(!attempt.controller.signal.aborted){setPreparationFailed(preparing);setError(`${preparing?'Could not prepare local transcription':'Could not start recording'}: ${e instanceof Error?e.message:String(e)}`);} }
-    finally {startingCapture.current=false;if(prepareAttempt.current?.id===attempt.id){prepareAttempt.current=null;setPreparation(null);setBusy(false);} }
+    finally {startingCapture.current=false;if(prepareAttempt.current?.id===attempt.id){prepareAttempt.current=null;setPreparation(null);if(!speechCancellation.current)setBusy(false);} }
   };
   const stopMeeting = async () => {
     if (!activeMeeting||stoppingCapture.current) return;
@@ -321,7 +346,7 @@ export function App() {
       const blob = current.mode === 'microphone' ? await capture.current.stop() : undefined;
       if (blob && settings.retainAudio) { setAudioBlob(blob); setAudioUrl(URL.createObjectURL(blob)); setAudioName(`Recording · ${current.title}`); }
       setCaptureMeetingId(null); persist({ ...(meetingRef.current.find(m=>m.id===current.id)??current), status: 'complete' });if(current.mode==='microphone')void generateReport(current.id);
-    } catch (e) { setError(String(e)); } finally { stoppingCapture.current=false;setBusy(false); }
+    } catch (e) { setError(String(e)); } finally { if(!speechCancellation.current){stoppingCapture.current=false;setBusy(false);} }
   };
   const pauseMeeting = async () => {
     if (!activeMeeting||busy||enginePhase==='finalizing') return;
