@@ -86,6 +86,7 @@ export function App() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const settingsRef=useRef(settings);settingsRef.current=settings;
   const reportJobs=useRef(new Map<string,AbortController>());
+  const deletingMeetings=useRef(new Set<string>());
   const reportedSessions=useRef(new Set<string>());
   const stoppingCapture=useRef(false);
   const [documents, setDocuments] = useState<IndexedDocument[]>([]);
@@ -190,30 +191,54 @@ export function App() {
   const meeting = meetings.find(m => m.id === selectedId);
   const activeMeeting = meetings.find(m => m.id === captureMeetingId);
   function persist(next: Meeting) {
+    if(deletingWorkspace.current||deletingMeetings.current.has(next.id))return;
     const updated = meetingRef.current.some(m => m.id === next.id) ? meetingRef.current.map(m => m.id === next.id ? next : m) : [next, ...meetingRef.current];
     meetingRef.current = updated; setMeetings(updated); setSaveState('Saving…'); saveCount.current++;
     void storage.saveMeeting(next).then(() => { saveCount.current--; if (!saveCount.current) setSaveState('Saved locally'); }).catch(e => { saveCount.current--; setSaveState('Save failed'); setError(String(e)); });
   }
   async function generateReport(id:string,force=false){
     const source=meetingRef.current.find(m=>m.id===id);
-    if(!source||source.mode==='demo'||reportJobs.current.has(id)||['live','paused'].includes(source.status))return;
+    if(deletingWorkspace.current||deletingMeetings.current.has(id)||!source||source.mode==='demo'||reportJobs.current.has(id)||['live','paused'].includes(source.status))return;
     const controller=new AbortController();reportJobs.current.set(id,controller);
+    const ownsJob=()=>reportJobs.current.get(id)===controller;
     const snapshot=reportInput(source),configuration=settingsRef.current,provider=reportProvider(configuration,isNative(),isIOS());
     const stamp=()=>new Date().toISOString();let inputHash="";
     try{
       inputHash=await reportHash(snapshot);
-      const current=meetingRef.current.find(m=>m.id===id);if(!current||controller.signal.aborted)return;
+      const current=meetingRef.current.find(m=>m.id===id);if(!current||!ownsJob()||controller.signal.aborted)return;
       if(!force&&current.report?.inputHash===inputHash)return;
       if(!reportSources(current).length){persist({...current,report:{status:'unavailable',provider,inputHash,message:current.recording?.transcribing?'No finalized speech was received. Check the recording warnings, selected input and transcription engine. Buddy cannot create notes from missing speech.':'This was an audio-only recording. No transcript was generated. Enable transcription before your next recording.',updatedAt:stamp()}});return;}
       const running={...current,report:{status:'running' as const,provider,inputHash,message:provider==='excerpts'?'Saving source-linked excerpts. Choose NVIDIA with text permission or an installed local note model for an AI report.':'Your transcript is saved. Preparing an evidence-linked AI draft; your personal notes stay unchanged.',updatedAt:stamp()}};
       persist(running);await storage.saveMeeting(running);
+      if(!ownsJob())return;
+      if(controller.signal.aborted)throw Error('Report cancelled. Your transcript and personal notes are saved.');
       const draft=await buildReport(source,configuration,provider,controller.signal);
-      const latest=meetingRef.current.find(m=>m.id===id);if(!latest)return;
+      const latest=meetingRef.current.find(m=>m.id===id);if(!latest||!ownsJob())return;
       if(controller.signal.aborted)throw Error('Report cancelled. Your transcript and personal notes are saved.');
       if(reportInput(latest)!==snapshot)throw Error('The transcript changed while generating. Retry using the latest speech.');
       persist({...applyDraft(latest,draft,provider),report:{status:'ready',provider,inputHash,message:provider==='excerpts'?'Selected passages from the saved transcript, not an AI summary. Configure an AI provider to generate a report.':'AI-generated draft with transcript evidence. Check decisions and actions before relying on them.',updatedAt:stamp()}});
-    }catch(e){const current=meetingRef.current.find(m=>m.id===id);if(current)persist({...current,report:{status:'failed',provider,inputHash,message:e instanceof Error?e.message:String(e),updatedAt:stamp()}});}
-    finally{reportJobs.current.delete(id);}
+    }catch(e){const current=meetingRef.current.find(m=>m.id===id);if(current&&ownsJob())persist({...current,report:{status:'failed',provider,inputHash,message:e instanceof Error?e.message:String(e),updatedAt:stamp()}});}
+    finally{if(ownsJob())reportJobs.current.delete(id);}
+  }
+  async function deleteMeeting(target:Meeting){
+    if(target.id===captureMeetingId)throw new Error('Finish the active meeting before deleting it.');
+    const id=target.id;
+    deletingMeetings.current.add(id);
+    const job=reportJobs.current.get(id);
+    // Revoke ownership before awaiting native cleanup or the storage queue. Even a
+    // provider that ignores cancellation must not write a late result or error.
+    reportJobs.current.delete(id);job?.abort();
+    try{
+      if(isNative()&&target.mode!=='demo')await engine.deleteMeeting(id);
+      await storage.deleteMeeting(id);
+      const next=meetingRef.current.filter(m=>m.id!==id);
+      meetingRef.current=next;setMeetings(next);navigate('home');setModal(null);
+    }catch(error){
+      deletingMeetings.current.delete(id);
+      const current=meetingRef.current.find(m=>m.id===id);
+      if(current?.report?.status==='running')persist({...current,report:{...current.report,status:'failed',message:'Report cancelled while deleting. Your saved transcript and personal notes are intact. Retry the report or delete again.',updatedAt:new Date().toISOString()}});
+      throw error;
+    }finally{deletingMeetings.current.delete(id);}
   }
   useEffect(()=>{for(const controller of reportJobs.current.values())controller.abort();},[settings.provider,settings.nvidiaConsent,settings.nvidiaModel,settings.localNoteModel]);
   useEffect(()=>()=>{for(const controller of reportJobs.current.values())controller.abort();},[]);
@@ -363,12 +388,17 @@ export function App() {
     deletingWorkspace.current = true;
     importJob.current?.abort(); importJob.current = null; setBusy(false); setImportStatus('');
     try {
-      for(const controller of reportJobs.current.values())controller.abort();
+      const jobs=[...reportJobs.current.values()];reportJobs.current.clear();
+      for(const controller of jobs)controller.abort();
       if (isNative()) {await invoke('engine_clear_history');await invoke('delete_api_key');await invoke('delete_groq_key');await invoke('delete_deepgram_key');await invoke('delete_knowledge_key',{provider:'nvidia'});await invoke('delete_knowledge_key',{provider:'voyage'});}
       await storage.clearAll(); meetingRef.current = []; setMeetings([]); setDocuments([]); originals.current.clear();
       setAudioUrl(''); setAudioBlob(undefined);
       const next = { ...defaultSettings, onboarded: true }; await storage.saveSettings(next); setSettings(next); navigate('home'); setModal(null); setSelection(null);
-    } catch (e) { setError(String(e)); throw e; }
+    } catch (e) {
+      deletingWorkspace.current=false;
+      for(const current of meetingRef.current)if(current.report?.status==='running')persist({...current,report:{...current.report,status:'failed',message:'Report cancelled while deleting. Your saved transcript and personal notes are intact. Retry the report or delete again.',updatedAt:new Date().toISOString()}});
+      setError(String(e));throw e;
+    }
     finally { deletingWorkspace.current = false; }
   };
   const importAudio = (file: File | undefined) => {
@@ -426,7 +456,7 @@ export function App() {
     {modal === 'focus' && <FocusDialog enabled={settings.focusMode} onChange={enabled=>changeSettings({...settings,focusMode:enabled})} onClose={()=>setModal(null)}/>}
     {modal === 'settings' && <SettingsDialog settings={settings} onChange={changeSettings} onClose={() => setModal(null)} onDelete={() => setModal('delete')} onKnowledge={() => { setModal(null); navigate('knowledge'); }} />}
     <ConfirmationDialog open={modal==='delete'} title="Delete this workspace?" description="This deletes all saved meetings, notes, settings, and indexed excerpts from this device. It does not change your source files. Export anything you want to keep first." confirmLabel="Delete all data" cancelLabel="Keep workspace" disabled={!!captureMeetingId} onClose={()=>setModal(null)} onConfirm={deleteAll}/>
-    <ConfirmationDialog open={modal==='deleteMeeting'&&!!meeting} title="Delete this meeting?" description={`“${meeting?.title??''}” and its notes, transcript, and events will be permanently removed from this workspace.`} confirmLabel="Delete meeting" cancelLabel="Keep meeting" disabled={meeting?.id===captureMeetingId} onClose={()=>setModal(null)} onConfirm={async()=>{if(!meeting||meeting.id===captureMeetingId)throw new Error('Finish the active meeting before deleting it.');if(isNative()&&meeting.mode!=='demo')await engine.deleteMeeting(meeting.id);await storage.deleteMeeting(meeting.id);const next=meetingRef.current.filter(m=>m.id!==meeting.id);meetingRef.current=next;setMeetings(next);navigate('home');setModal(null);}}/>
+    <ConfirmationDialog open={modal==='deleteMeeting'&&!!meeting} title="Delete this meeting?" description={`“${meeting?.title??''}” and its notes, transcript, and events will be permanently removed from this workspace.`} confirmLabel="Delete meeting" cancelLabel="Keep meeting" disabled={meeting?.id===captureMeetingId} onClose={()=>setModal(null)} onConfirm={async()=>{if(!meeting)throw new Error('No meeting selected.');await deleteMeeting(meeting);}}/>
     {modal === 'export' && meeting && <Modal title="Keep the conversation" onClose={() => setModal(null)}><div className="modal-body"><p>Export your notes and timestamped evidence. Audio is not included.</p><div className="export-options"><button onClick={() => downloadFile(toMarkdown(meeting), `${meeting.title.replace(/[^a-z0-9 -]/gi,'') || 'meeting'}.md`, 'text/markdown')}><FileText size={23} /><strong>Markdown</strong><span>Readable notes and transcript</span><ArrowDownToLine size={17} /></button><button onClick={() => downloadFile(JSON.stringify(meeting, null, 2), 'buddy-meeting.json', 'application/json')}><LayoutPanelLeft size={23} /><strong>JSON</strong><span>Structured meeting and evidence</span><ArrowDownToLine size={17} /></button></div></div></Modal>}
     {selection && <Modal title={selection.event ? 'Behind this moment' : 'Source evidence'} onClose={() => setSelection(null)} wide={!!selection.citation?.chunk} className={selection.citation?.chunk?'source-sheet':'evidence-sheet'}><div className="evidence-body">{selection.event && <><div className={`evidence-kind event-${selection.event.type}`}>{eventLabels[selection.event.type]}<span>{timestamp(selection.event.start)}–{timestamp(selection.event.end)}</span></div><h3>{selection.event.title}</h3><p>{selection.event.text}</p><span className={`badge ${selection.event.evidenceState === 'explicit' ? 'confirmed' : 'warning'}`}><Check size={12} />{evidenceLabels[selection.event.evidenceState]}</span>{selection.event.relatedIds.length > 0 && <div className="related-moments"><span>Developed from</span>{selection.event.relatedIds.map(id => { const related = eventMeeting?.events.find(e => e.id === id); return related && <button key={id} onClick={() => setSelection({ event: related })}>{related.title}<ChevronRight size={13} /></button>; })}</div>}</>}{evidenceSegments?.map(s => <div className="evidence-excerpt" key={s.id}><div><AudioLines size={14} />Original transcript<span>{timestamp(s.start)}–{timestamp(s.end)}</span></div><blockquote>{s.text}</blockquote><button className="text-button" onClick={() => eventMeeting && gotoTranscript(eventMeeting.id, s.id)}>Go to transcript<ArrowRight size={13} /></button></div>)}{selection.event && eventMeeting && <button className="button secondary small" onClick={() => { const id = selection.event?.id; const block = eventMeeting.blocks.find(b => b.eventIds.includes(id ?? '')); openMeeting(eventMeeting); setTimeout(() => block && document.getElementById(`block-${block.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); }}>Open meeting notes<ArrowRight size={14} /></button>}{selection.citation?.kind==='note' && <><h3>{selection.citation.label}</h3>{eventMeeting?.blocks.find(b=>b.id===selection.citation?.blockId&&b.revision===selection.citation?.revision)?<><SourceExcerpt text={eventMeeting.blocks.find(b=>b.id===selection.citation?.blockId)!.html.replace(/<[^>]*>/g,' ')} name="Meeting note"/><button className="button secondary small" onClick={()=>{const id=selection.citation?.blockId;openMeeting(eventMeeting);setTimeout(()=>id&&document.getElementById(`block-${id}`)?.scrollIntoView({block:'center',behavior:settings.reduceMotion?'instant':'smooth'}),100);}}>Open meeting note<ArrowRight size={14}/></button></>:<p role="alert">This note was edited or removed after the answer. Ask again to use the current revision.</p>}</>}{selection.citation?.chunk && <><div className="document-source-heading"><FileText size={26} /><h3>{selection.citation.chunk.name}</h3></div><span className="badge neutral">{selection.citation.chunk.location}</span>{selection.citation.chunk.demo && <p className="demo-source-label">Fictional demo fixture · not real financial data</p>}<SourceExcerpt text={selection.citation.chunk.text} name={selection.citation.chunk.name}/><p className="field-help">Selected excerpt from your saved source. {selection.citation.chunk.name.endsWith('.xlsx') && 'Displays saved cell values; formulas are not recalculated.'}</p>{selection.citation.chunk.demo ? <a className="button secondary small" href={`/fixtures/${selection.citation.chunk.name}`} download>Download source file<ArrowDownToLine size={14} /></a> : originals.current.has(selection.citation.chunk.documentId) ? <button className="button secondary small" onClick={() => { const f = originals.current.get(selection.citation!.chunk!.documentId)!; downloadFile(f, f.name); }}>Download selected original<ArrowDownToLine size={14} /></button> : <div className="info-box">Your excerpt is saved. Reselect the original file in Knowledge to download it in this session.</div>}</>}<p className="evidence-footnote"><ShieldCheck size={13} />Text evidence only. Timestamped audio verification is not available.</p></div></Modal>}
   </div></ReducedMotionConfig></MotionProvider>;
