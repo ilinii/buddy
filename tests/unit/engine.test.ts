@@ -23,3 +23,30 @@ describe('evidence-backed drafts',()=>{
  it('escapes untrusted generated HTML',()=>{const m=fixture(),draft={items:[{kind:'summary' as const,title:'<script>bad</script>',text:'<img src=x onerror=evil()>',evidenceIds:['native-1']}]};const next=applyDraft(m,draft,'local');expect(next.blocks[1].html).not.toContain('<script>');expect(next.blocks[1].html).toContain('&lt;img');});
  it('isolates real meetings from demo segments',()=>{const m=fixture();m.segments.push({id:'demo-secret',start:0,end:1,text:'Demo only',channel:'demo',final:true});expect(excerptDraft(m).items.flatMap(i=>i.evidenceIds)).not.toContain('demo-secret');});
 });
+
+describe('action identity across report revisions', () => {
+ const action = (title: string, text: string) => ({kind: 'action_item' as const, title, text, evidenceIds: ['native-1']});
+ const original = action('Send the brief', 'Send it Friday.');
+ const paraphrase = action('Send the brief', 'Alex will send it on Friday.');
+ function withCompletedAction() {
+   const meeting = applyDraft(fixture(), {items: [original]}, 'nvidia');
+   meeting.events[0].done = true;
+   return meeting;
+ }
+ it('keeps the completed action ID when its description is paraphrased', () => {
+   const before = withCompletedAction();
+   const after = applyDraft(before, {items: [paraphrase]}, 'nvidia');
+   expect(after.events).toHaveLength(1);
+   expect(after.events[0]).toMatchObject({id: before.events[0].id, done: true, text: paraphrase.text});
+   expect(after.blocks.at(-1)?.eventIds).toEqual([before.events[0].id]);
+ });
+ it('leaves a new or ambiguous task from the same passage unchecked', () => {
+   const before = withCompletedAction();
+   const revised = applyDraft(before, {items: [action('Call supplier', 'Call Friday.')]}, 'nvidia');
+   expect(revised.events.find(event => event.title === 'Call supplier')?.done).toBe(false);
+   expect(revised.events.find(event => event.id === before.events[0].id)?.done).toBe(true);
+   const split = applyDraft(before, {items: [paraphrase, action(original.title, 'Send the second brief.')]}, 'nvidia');
+   expect(split.events.filter(event => event.id !== before.events[0].id).map(event => event.done)).toEqual([false, false]);
+   expect(split.events.find(event => event.id === before.events[0].id)?.done).toBe(true);
+ });
+});
