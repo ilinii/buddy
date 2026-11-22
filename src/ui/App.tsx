@@ -123,6 +123,7 @@ export function App() {
   const [importStatus, setImportStatus] = useState('');
   const [transcriptSearch, setTranscriptSearch] = useState('');
   const capture = useRef(new MicrophoneCapture());
+  const browserCaptureId=useRef<string|null>(null);
   const engineSession=useRef<string|null>(null);
   const activeNativeSession=useRef<EngineSession|null>(null);
   const speechCancellation=useRef<string|null>(null);
@@ -187,8 +188,8 @@ export function App() {
   useEffect(() => { document.documentElement.dataset.reducedMotion = String(settings.reduceMotion); }, [settings.reduceMotion]);
   useEffect(() => { return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }; }, [audioUrl]);
   useEffect(() => {
-    capture.current.onError = message => { setError(message); const id = captureMeetingId; if (id) { const m = meetingRef.current.find(x => x.id === id); if (m) persist({ ...m, status: 'interrupted' }); } setCaptureMeetingId(null); };
-  }, [captureMeetingId]);
+    capture.current.onError = message => {setError(message);if(browserCaptureId.current)void finishBrowserRecording(browserCaptureId.current);};
+  }, []);
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => { if (capture.current.state !== 'idle' || engineSession.current || saveCount.current || reportJobs.current.size) { event.preventDefault(); } };
     window.addEventListener('beforeunload', beforeUnload);
@@ -328,7 +329,7 @@ export function App() {
           if(attempt.controller.signal.aborted)return;
           const session=await engine.start(m.id,recordingSettings);engineSession.current=session.sessionId;activeNativeSession.current=session;
           Object.assign(m,mergeEngineSession(meetingRef.current.find(item=>item.id===m.id)??m,session));setEnginePhase('live');
-        }else {await capture.current.start(settings.deviceId);if(targetId)Object.assign(m,{...(meetingRef.current.find(note=>note.id===targetId)??m),kind:'note',mode,status:'live'});}
+        }else {browserCaptureId.current=m.id;try{await capture.current.start(settings.deviceId);}catch(error){browserCaptureId.current=null;throw error;}if(targetId)Object.assign(m,{...(meetingRef.current.find(note=>note.id===targetId)??m),kind:'note',mode,status:'live'});}
       }
       startingCapture.current=false;persist(m);if(targetId){setInlineCaptureId(null);focusNoteEditor();}else openMeeting(m,undefined,mode==='manual');setModal(null);setNewTitle('');setConsent(false);
       if (mode !== 'manual') { setCaptureMeetingId(m.id); setShowAssistant(false); }
@@ -336,15 +337,29 @@ export function App() {
     } catch (e) {if(targetId&&!engineSession.current){const latest=meetingRef.current.find(note=>note.id===targetId);if(latest?.mode==='microphone'&&!latest.segments.length)persist({...latest,mode:'manual',status:'ready'});}if(!attempt.controller.signal.aborted){setPreparationFailed(preparing);setError(`${preparing?'Could not prepare local transcription':'Could not start recording'}: ${e instanceof Error?e.message:String(e)}`);} }
     finally {startingCapture.current=false;if(prepareAttempt.current?.id===attempt.id){prepareAttempt.current=null;setPreparation(null);if(!speechCancellation.current)setBusy(false);} }
   };
+  async function finishBrowserRecording(id:string){
+    if(stoppingCapture.current)return;
+    const current=meetingRef.current.find(m=>m.id===id);
+    if(!current||current.mode!=='microphone')return;
+    stoppingCapture.current=true;setBusy(true);
+    try{
+      const blob=await capture.current.stop();
+      if(blob?.size&&settingsRef.current.retainAudio){setAudioBlob(blob);setAudioUrl(URL.createObjectURL(blob));setAudioName(`Recording · ${current.title}`);}
+      const latest=meetingRef.current.find(m=>m.id===id);
+      if(latest)persist({...latest,status:capture.current.error?'interrupted':'complete'});
+      browserCaptureId.current=null;setCaptureMeetingId(null);
+      if(!capture.current.error)void generateReport(id);
+    }catch(error){setError(String(error));}
+    finally{stoppingCapture.current=false;setBusy(false);}
+  }
   const stopMeeting = async () => {
     if (!activeMeeting||stoppingCapture.current) return;
+    if(activeMeeting.mode==='microphone'&&!engineSession.current){await finishBrowserRecording(activeMeeting.id);return;}
     stoppingCapture.current=true;
     const current = activeMeeting;
     setBusy(true);
     try {
       if(current.mode==='microphone'&&engineSession.current){setEnginePhase('finalizing');const session=await engine.stop(engineSession.current);applyNative(session);return;}
-      const blob = current.mode === 'microphone' ? await capture.current.stop() : undefined;
-      if (blob && settings.retainAudio) { setAudioBlob(blob); setAudioUrl(URL.createObjectURL(blob)); setAudioName(`Recording · ${current.title}`); }
       setCaptureMeetingId(null); persist({ ...(meetingRef.current.find(m=>m.id===current.id)??current), status: 'complete' });if(current.mode==='microphone')void generateReport(current.id);
     } catch (e) { setError(String(e)); } finally { if(!speechCancellation.current){stoppingCapture.current=false;setBusy(false);} }
   };

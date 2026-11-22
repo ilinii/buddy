@@ -13,11 +13,17 @@ export class MicrophoneCapture implements CaptureBackend {
   private animation = 0;
   private chunks: Blob[] = [];
   private bytes = 0;
-  private stopping?: Promise<Blob | undefined>;
+  private completion?: Promise<Blob | undefined>;
+  private starting = false;
+  private stopRequested = false;
+  private failure?: string;
+  get error() { return this.failure; }
   onError?: (error: string) => void;
   async start(deviceId = 'default') {
-    if (this.state !== 'idle') throw new Error('A recording is already active');
+    if (this.state !== 'idle' || this.starting || this.completion) throw new Error('A recording is already active');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error('Microphone capture is unavailable in this runtime');
+    this.starting = true;this.failure = undefined;this.stopRequested = false;
+    let finish: (blob: Blob | undefined) => void = () => {};
     try {
       this.chunks = []; this.bytes = 0;
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: {
@@ -25,15 +31,23 @@ export class MicrophoneCapture implements CaptureBackend {
         echoCancellation: true, noiseSuppression: true, autoGainControl: true,
       } });
       const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'].find(t => MediaRecorder.isTypeSupported(t));
-      this.recorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : undefined);
-      this.recorder.ondataavailable = event => {
-        if (!event.data.size) return;
-        this.bytes += event.data.size;
-        if (this.bytes > 100 * 1024 * 1024) { this.onError?.('Recording stopped at the 100 MB session limit.'); void this.stop(); return; }
-        this.chunks.push(event.data);
+      const recorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : undefined);
+      this.recorder = recorder;
+      recorder.ondataavailable = event => {
+        if (this.recorder !== recorder || !event.data.size) return;
+        if (this.bytes + event.data.size > 100 * 1024 * 1024) { this.fail(recorder, 'Recording stopped at the 100 MB session limit.'); return; }
+        this.bytes += event.data.size;this.chunks.push(event.data);
       };
-      this.recorder.onerror = () => { this.onError?.('The microphone recorder failed. The session has stopped.'); void this.stop(); };
-      this.stream.getAudioTracks().forEach(track => { track.onended = () => { if (this.state !== 'idle') { this.onError?.('Microphone disconnected. Reconnect it and start a new recording.'); void this.stop(); } }; });
+      recorder.onerror = () => this.fail(recorder, 'The microphone recorder failed. The session has stopped.');
+      // Register before start: an automatic error can make the recorder inactive
+      // before its final dataavailable and stop events have been delivered.
+      recorder.onstop = () => {
+        if (this.recorder !== recorder) return;
+        if (!this.stopRequested) this.fail(recorder, 'The microphone recording ended unexpectedly.');
+        const blob = this.chunks.length ? new Blob(this.chunks, {type: recorder.mimeType}) : undefined;
+        this.chunks = [];this.cleanup();this.completion = undefined;finish(blob);
+      };
+      this.stream.getAudioTracks().forEach(track => { track.onended = () => this.fail(recorder, 'Microphone disconnected. Reconnect it and start a new recording.'); });
       this.audioContext = new AudioContext();
       const analyser = this.audioContext.createAnalyser(); analyser.fftSize = 256;
       this.audioContext.createMediaStreamSource(this.stream).connect(analyser);
@@ -43,26 +57,34 @@ export class MicrophoneCapture implements CaptureBackend {
         this.level = this.state === 'recording' ? Math.sqrt(values.reduce((s, v) => s + ((v - 128) / 128) ** 2, 0) / values.length) : 0;
         this.animation = requestAnimationFrame(tick);
       };
-      this.recorder.start(1000); this.state = 'recording'; tick();
-    } catch (error) { this.cleanup(); throw error; }
+      this.completion = new Promise(resolve => {finish = resolve;});
+      recorder.start(1000); this.state = 'recording'; tick();
+    } catch (error) {
+      const recorder = this.recorder;this.cleanup();this.chunks = [];this.completion = undefined;finish(undefined);
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      throw error;
+    } finally {this.starting = false;}
   }
   pause() { if (this.recorder?.state === 'recording') { this.recorder.pause(); this.state = 'paused'; } }
   resume() { if (this.recorder?.state === 'paused') { this.recorder.resume(); this.state = 'recording'; } }
   stop(): Promise<Blob | undefined> {
-    if (this.stopping) return this.stopping;
-    if (!this.recorder || this.recorder.state === 'inactive') { this.cleanup(); return Promise.resolve(undefined); }
-    const recorder = this.recorder;
-    this.stopping = new Promise(resolve => {
-      recorder.onstop = () => {
-        const blob = new Blob(this.chunks, { type: recorder.mimeType });
-        this.chunks = []; this.cleanup(); this.stopping = undefined; resolve(blob);
-      };
-      recorder.stop();
-    });
-    return this.stopping;
+    const completion = this.completion;
+    if (!completion || !this.recorder) return Promise.resolve(undefined);
+    if (!this.stopRequested) {
+      this.stopRequested = true;
+      if (this.recorder.state !== 'inactive') this.recorder.stop();
+    }
+    return completion;
+  }
+  private fail(recorder: MediaRecorder, message: string) {
+    if (this.recorder !== recorder || this.failure) return;
+    this.failure = message;
+    try {this.onError?.(message);} finally {void this.stop();}
   }
   private cleanup() {
     this.state = 'idle'; this.level = 0;
+    if (this.recorder) {this.recorder.ondataavailable = null;this.recorder.onerror = null;this.recorder.onstop = null;}
+    this.recorder = undefined;
     cancelAnimationFrame(this.animation);
     this.stream?.getTracks().forEach(t => { t.onended = null; t.stop(); });
     void this.audioContext?.close(); this.audioContext = undefined; this.stream = undefined;
