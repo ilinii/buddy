@@ -9,8 +9,8 @@ export function safeRelativePath(path: string) {
   if (normalized.startsWith('/') || /^[a-z]:/i.test(normalized) || normalized.split('/').some(p => p === '..' || p === '.')) throw new Error('File path is outside the selected folder');
   return normalized;
 }
-export function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
+function readCsv(text: string, accept: (cells: string[], rowNumber: number) => void) {
+  let rowNumber = 1;
   let row: string[] = [], cell = '', quoted = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -18,11 +18,19 @@ export function parseCsv(text: string): string[][] {
     else if (c === ',' && !quoted) { row.push(cell); cell = ''; }
     else if ((c === '\n' || c === '\r') && !quoted) {
       if (c === '\r' && text[i + 1] === '\n') i++;
-      row.push(cell); if (row.some(v => v.length)) rows.push(row); row = []; cell = '';
+      row.push(cell);
+      if (row.some(v => v.length)) accept(row, rowNumber);
+      rowNumber++;
+      row = []; cell = '';
     } else cell += c;
   }
   if (quoted) throw new Error('CSV contains an unclosed quoted field');
-  row.push(cell); if (row.some(v => v.length)) rows.push(row);
+  row.push(cell);
+  if (row.some(v => v.length)) accept(row, rowNumber);
+}
+export function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  readCsv(text, cells => rows.push(cells));
   return rows;
 }
 export function columnName(index: number): string {
@@ -48,8 +56,12 @@ export async function parseDocument(file: File, group: string, demo = false): Pr
     const lines = (await file.text()).split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 12) add(lines.slice(i, i + 12).join('\n'), `Lines ${i + 1}–${Math.min(i + 12, lines.length)}`);
   } else if (ext === 'csv') {
-    const rows = parseCsv(await file.text());
-    rows.forEach((row, ri) => add(row.map((v, ci) => `${columnName(ci)}${ri + 1} (${rows[0]?.[ci] ?? 'column'}): ${v}`).join(' · '), `CSV!A${ri + 1}:${columnName(Math.max(row.length - 1, 0))}${ri + 1}`));
+    let header: string[] | undefined;
+    readCsv(await file.text(), (row, rowNumber) => {
+      header ??= row;
+      const values = row.map((value, column) => `${columnName(column)}${rowNumber} (${header?.[column] ?? 'column'}): ${value}`);
+      add(values.join(' · '), `CSV!A${rowNumber}:${columnName(row.length - 1)}${rowNumber}`);
+    });
   } else if (ext === 'xlsx') {
     const { default: readXlsxFile } = await import('read-excel-file/browser');
     const sheets = await readXlsxFile(file);
