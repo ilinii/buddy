@@ -62,7 +62,7 @@ export interface DocumentChunk {
   group: string; demo: boolean;
 }
 export interface IndexedDocument {
-  id: string; name: string; type: string; size: number; indexedAt: string; group: string; demo: boolean;
+  id: string; name: string; type: string; size: number; indexedAt: string; group: string; demo: boolean; contentHash?: string;
   chunks: DocumentChunk[];
 }
 export interface Citation {
