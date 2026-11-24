@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { invoke } from '@tauri-apps/api/core';
 import { appendEvent, mergeSynthesisBlock, timestamp, type Meeting, type NoteBlock } from '../meeting/model';
-export const draftSchema=z.object({items:z.array(z.object({kind:z.enum(['summary','decision','action_item','question']),title:z.string().trim().min(1).max(200),text:z.string().trim().min(1).max(3000),evidenceIds:z.array(z.string()).min(1).max(12)}).strict()).min(1).max(48)}).strict();
+export const draftSchema=z.object({items:z.array(z.object({kind:z.enum(['summary','decision','action_item','question']),title:z.string().trim().min(1).max(200),text:z.string().trim().min(1).max(3000),evidenceIds:z.array(z.string()).min(1).max(12).transform(ids => [...new Set(ids)])}).strict()).min(1).max(48)}).strict();
 export type NoteDraft=z.infer<typeof draftSchema>;
 export function validateDraft(value:unknown,meeting:Meeting):NoteDraft{
   const draft=draftSchema.parse(value);
