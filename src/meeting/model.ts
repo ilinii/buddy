@@ -114,7 +114,7 @@ export function createMeeting(title: string, mode: Meeting['mode']): Meeting {
     ] };
 }
 export function toMarkdown(meeting: Meeting) {
-  const plain = (html: string) => html.replace(/<li>/g, '\n- ').replace(/<\/p>|<\/h[1-6]>/g, '\n\n').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ');
+  const plain = (html: string) => html.replace(/<br\s*\/?>/gi, '  \n').replace(/<li>/g, '\n- ').replace(/<\/p>|<\/h[1-6]>/g, '\n\n').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ');
   return `# ${meeting.title}\n\n${meeting.mode === 'demo' ? 'DEMO MEETING — fictional sample discussion\n\n' : ''}${new Date(meeting.date).toLocaleString()}\n\n`
     + (meeting.participants.length ? `People (added manually): ${meeting.participants.map(p => p.name).join(', ')}\n\n` : '')
     + meeting.blocks.map(b => `## ${b.title}\n\n${plain(b.html).trim()}`).join('\n\n')
