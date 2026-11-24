@@ -82,5 +82,18 @@ export async function parseDocument(file: File, group: string, demo = false): Pr
     } finally { await task.destroy(); }
   }
   if (!chunks.length) throw new Error(`${file.name}: no readable text found. Scanned PDFs require OCR, which is not installed.`);
-  return { id, name: file.name, type: ext, size: file.size, indexedAt: new Date().toISOString(), group, demo, chunks };
+  const contentHash = group === 'Selected files'
+    ? Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer())), byte => byte.toString(16).padStart(2, '0')).join('')
+    : undefined;
+  return { id, contentHash, name: file.name, type: ext, size: file.size, indexedAt: new Date().toISOString(), group, demo, chunks };
+}
+
+/** Loose files have no directory handle. Keep both when their bytes differ. */
+export function resolveSelectedFile(doc: IndexedDocument, documents: IndexedDocument[]): IndexedDocument {
+  if (!doc.contentHash) return doc;
+  const first = documents.find(existing => existing.id === doc.id);
+  if (!first || first.contentHash === doc.contentHash) return doc;
+  // Older snapshots have no digest. Keep their existing evidence and citations intact.
+  const id = `${doc.id}/${doc.contentHash}`;
+  return { ...doc, id, chunks: doc.chunks.map((chunk, index) => ({ ...chunk, documentId: id, id: `${id}:${index}` })) };
 }

@@ -6,7 +6,7 @@ import { defaultSettings, createMeeting, isPersonalNote, evidenceLabels, eventLa
 import { demoMeeting, replayFrame, sampleMeetings } from '../meeting/demo';
 import { storage, isNative } from '../storage/service';
 import { extractDocument } from '../documents/service';
-import { supportedExtensions } from '../documents/parser';
+import { resolveSelectedFile, supportedExtensions } from '../documents/parser';
 import { recordingPermissionIssue, engine, mergeEngineSession, recoverOrphanSession, type EngineSession, type PreparationProgress } from '../engine/client';
 import { EngineSetup } from './EngineSetup';
 import { TranscriptDraft } from './TranscriptDraft';
@@ -395,7 +395,8 @@ export function App() {
         setImportStatus(`Indexing ${count + 1} of ${supported.length} · ${file.name}`);
         try {
           const group = folder ? `Folder: ${file.webkitRelativePath.split('/')[0]}` : 'Selected files';
-          const doc = await extractDocument(file, group, false, controller.signal);
+          const extracted = await extractDocument(file, group, false, controller.signal);
+          const doc = resolveSelectedFile(extracted, nextDocs);
           if (controller.signal.aborted) return;
           await storage.indexDocument(doc);
           if (controller.signal.aborted) return;
