@@ -24,3 +24,21 @@ test('speaker display uses anonymous labels without adding reconnect counts',asy
 test('orphaned native journals recover into a visible recording instead of being discarded',async({page})=>{
  await nativeTransport(page);await page.goto('/?demo=home');await page.evaluate(()=>{sessionStorage.setItem('engine-journal',JSON.stringify({sessionId:crypto.randomUUID(),meetingId:crypto.randomUUID(),startedAt:1700000000,status:'complete',duration:8,segments:[{id:'orphan-final',start:1,end:7,text:'Speech survived a missing workspace entry.',channel:'microphone',final:true}],transcribing:true,retainedAudio:false,warnings:[]}));});await page.reload();await page.getByRole('button',{name:'Open Recovered recording',exact:true}).click();await expect(page.locator('.meeting-report')).toContainText('Recovered saved speech');await page.getByRole('tab',{name:/Transcript/}).click();await expect(page.locator('.transcript-segment')).toContainText('Speech survived');
 });
+
+test('a report that repeats a citation and subsequent note edits both survive reload', async ({page}) => {
+  await nativeTransport(page);
+  await page.goto('/?demo=home');
+  await cloud(page);
+  await record(page);
+  await page.evaluate(() => { window.engineMock.repeatReportEvidence = true; });
+  await page.getByRole('button', {name: 'Finish', exact: true}).click();
+  await expect(page.locator('.meeting-report')).toContainText('Report ready');
+  const note = page.getByRole('textbox', {name: 'Meeting notes editor', exact: true});
+  await note.fill('Edited after receiving the report.');
+  await expect(page.getByText('Saved locally', {exact: true})).toBeVisible();
+  await page.reload();
+  await page.getByRole('button', {name: 'Open Report regression', exact: true}).click();
+  await expect(note).toContainText('Edited after receiving the report.');
+  await expect(page.locator('.meeting-report')).toContainText('Report ready');
+  await expect(page.getByRole('checkbox', {name: 'Complete Review proposal'})).toBeVisible();
+});
