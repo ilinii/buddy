@@ -143,6 +143,14 @@ export function App() {
   useEffect(() => () => importJob.current?.abort(), []);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
+  const refreshFolder = useRef<string | undefined>(undefined);
+  function chooseFolder(group?: string) {
+    refreshFolder.current = group;
+    if (folderInput.current) {
+      folderInput.current.value = '';
+      folderInput.current.click();
+    }
+  }
   const audioInput = useRef<HTMLInputElement>(null);
   const saveCount = useRef(0);
 
@@ -398,11 +406,30 @@ export function App() {
     setTimeout(() => { const node = document.getElementById(`segment-${segmentId}`); node?.scrollIntoView({ behavior: 'smooth', block: 'center' }); node?.classList.add('source-highlight'); setTimeout(() => node?.classList.remove('source-highlight'), 2000); }, 100);
   };
   const toggleAction = (m: Meeting, e: MeetingEvent) => persist({ ...m, events: m.events.map(item => item.id === e.id ? { ...item, done: !item.done, updatedAt: new Date().toISOString() } : item) });
-  const importFiles = async (files: FileList | null, folder = false) => {
+  const importFiles = async (files: FileList | null, folder = false, refreshGroup?: string) => {
     if (!files?.length || deletingWorkspace.current) return;
     const supported = Array.from(files).filter(f => supportedExtensions.includes(f.name.split('.').pop()!.toLowerCase()));
     if (supported.length > 200) { setError('Choose at most 200 supported files per import.'); return; }
     if (!supported.length) { setError('No supported files found. Choose PDF, DOCX, XLSX, CSV, TXT, or Markdown.'); return; }
+    let group = 'Selected files';
+    if (folder) {
+      const folderName = supported[0].webkitRelativePath.split('/')[0];
+      const base = `Folder: ${folderName}`;
+      if (refreshGroup) {
+        const previous = documents.find(doc => doc.group === refreshGroup);
+        if (!previous) { setError('This folder snapshot was removed. Add it as a new snapshot.'); return; }
+        const relativePath = previous.id.slice(refreshGroup.length + 1);
+        if (relativePath.includes('/') && relativePath.split('/')[0] !== folderName) {
+          setError(`Select the original folder named ${relativePath.split('/')[0]} to refresh this snapshot.`);
+          return;
+        }
+        group = refreshGroup;
+      } else {
+        const used = new Set(documents.map(doc => doc.group));
+        group = base;
+        for (let suffix = 2; used.has(group); suffix++) group = `${base} (${suffix})`;
+      }
+    }
     importJob.current?.abort();
     const controller = new AbortController(); importJob.current = controller;
     setBusy(true); setError(''); let count = 0;
@@ -414,7 +441,6 @@ export function App() {
         if (controller.signal.aborted) return;
         setImportStatus(`Indexing ${count + 1} of ${supported.length} · ${file.name}`);
         try {
-          const group = folder ? `Folder: ${file.webkitRelativePath.split('/')[0]}` : 'Selected files';
           const extracted = await extractDocument(file, group, false, controller.signal);
           const doc = resolveSelectedFile(extracted, nextDocs);
           if (controller.signal.aborted) return;
@@ -427,13 +453,17 @@ export function App() {
         } catch (e) { if (controller.signal.aborted) return; errors.push(e instanceof Error ? e.message : String(e)); }
       }
       if (controller.signal.aborted) return;
-      if (folder && !errors.length && imported.length) {
-        const group = imported[0].group;
-        try { await storage.replaceGroup(group, imported); nextDocs = [...nextDocs.filter(d => d.group !== group), ...imported]; }
+      if (refreshGroup && !errors.length && imported.length) {
+        try {
+          await storage.replaceGroup(group, imported);
+          const retained = new Set(imported.map(doc => doc.id));
+          for (const doc of nextDocs) if (doc.group === group && !retained.has(doc.id)) originals.current.delete(doc.id);
+          nextDocs = [...nextDocs.filter(d => d.group !== group), ...imported];
+        }
         catch (e) { errors.push(`Folder snapshot could not be refreshed: ${String(e)}`); }
       }
       if (controller.signal.aborted) return;
-      setDocuments(nextDocs); setBusy(false); setImportStatus(`${count} file${count === 1 ? '' : 's'} indexed locally.${folder ? ' Folder access is a snapshot; reselect to refresh.' : ''}`);
+      setDocuments(nextDocs); setBusy(false); setImportStatus(`${count} file${count === 1 ? '' : 's'} indexed locally.${folder ? ' Use Refresh folder to update this snapshot.' : ''}`);
       if (errors.length) setError(errors.join('\n'));
       if (fileInput.current) fileInput.current.value = ''; if (folderInput.current) folderInput.current.value = '';
     } finally {
@@ -480,7 +510,7 @@ export function App() {
   return <MotionProvider reducedMotion={settings.reduceMotion?'always':'user'}><ReducedMotionConfig><div className={`app-shell ${showSidebar ? 'sidebar-visible' : ''} ${settings.focusMode?'focus-mode':''}`}>
     <a className="skip-link" href="#main-content">Skip to workspace</a>
     <input ref={fileInput} type="file" accept=".pdf,.docx,.xlsx,.csv,.txt,.md" multiple hidden onChange={e => void importFiles(e.target.files)} />
-    <input ref={folderInput} type="file" multiple hidden {...{ webkitdirectory: '', directory: '' }} onChange={e => void importFiles(e.target.files, true)} />
+    <input ref={folderInput} type="file" multiple hidden {...{ webkitdirectory: '', directory: '' }} onChange={e => void importFiles(e.target.files, true, refreshFolder.current)} />
     <input ref={audioInput} type="file" accept="audio/*,.wav,.mp3,.m4a,.webm" hidden onChange={e => importAudio(e.target.files?.[0])} />
     <MotionRail page={page} open={showSidebar} actions={meetings.some(m=>m.events.some(event=>event.type==='action_item'&&!event.done))} focusMode={settings.focusMode} onClose={()=>setShowSidebar(false)} onNavigate={navigate} onExplore={openNavigator} onNew={()=>{setNewTitle('');setNewMode('microphone');setConsent(false);setModal('new');}} onSettings={()=>setModal('settings')}/>
 
@@ -507,7 +537,7 @@ export function App() {
 
     {page === 'actions' && <div className="collection actions-page"><h1>Action items</h1><p className="collection-intro">Keep track of what needs to happen next.</p><div className="collection-list">{meetings.flatMap(m=>m.events.filter(event=>event.type==='action_item').map(event=><article className="collection-row" key={`${m.id}-${event.id}`}><AnimatedCheckbox className="meeting-action-check" label={`${event.done?'Reopen':'Complete'} ${event.title}`} checked={event.done} onChange={()=>toggleAction(m,event)}/><div><button className={`collection-title ${event.done?'struck':''}`} onClick={()=>setSelection({event})}>{event.title}<ArrowUpRight size={14}/></button><p>{event.text}</p><button className="text-button subtle" onClick={()=>openMeeting(m)}>{m.title} · {timestamp(event.start)}{m.mode==='demo'?' · Demo':''}</button></div><span className="badge neutral">{event.done?'Completed':event.due??'No due date'}</span></article>))}{!meetings.some(m=>m.events.some(event=>event.type==='action_item'))&&<Empty title="No action items yet">Actions from your meetings will appear here.</Empty>}</div></div>}
 
-    {page === 'knowledge' && <div className="collection knowledge page-enter"><div className="eyebrow">CONTEXT BEYOND THE CONVERSATION</div><div className="knowledge-heading"><div><h1>Knowledge</h1><p className="collection-intro">Add the documents Buddy can search. Every answer starts with a source.</p></div><span className="knowledge-symbol"><BookOpen size={50} strokeWidth={0.8} /></span></div><div className="knowledge-actions"><button className="button primary" disabled={busy} onClick={() => fileInput.current?.click()}><Plus size={16} />Add files</button><button className="button secondary desktop-folder-import" disabled={busy} onClick={() => folderInput.current?.click()}><FolderOpen size={16} />Add folder snapshot</button><button className="text-button" onClick={() => audioInput.current?.click()}><Upload size={15} />Import audio</button></div><p className="field-help">PDF, DOCX, XLSX, CSV, TXT, Markdown · 20 MB per document · Selected files only · No background disk access</p>{importStatus && (!settings.focusMode||busy) && <p className="import-status" role="status">{busy ? <span className="status-dot" /> : <Check size={13} />}{importStatus}</p>}<div className="source-groups">{[...new Set(documents.map(d => d.group))].map(group => <section key={group}><header><h2><FolderOpen size={15} />{group}<span>{documents.filter(d => d.group === group).length} files</span></h2><button className="text-button subtle" disabled={busy} onClick={() => void revoke(group)}><Trash2 size={13} />Remove source</button></header>{documents.filter(d => d.group === group).map(doc => <button className="source-row" key={doc.id} onClick={() => setSelection({ citation: { kind: 'document', id: doc.chunks[0].id, label: doc.name, chunk: doc.chunks[0] } })}><span className={`file-type file-${doc.type}`}>{doc.type.toUpperCase()}</span><div><strong>{doc.name}</strong><span>{doc.chunks.length} indexed excerpts · {Math.max(1, Math.round(doc.size / 1024))} KB{doc.demo ? ' · Fictional demo fixture' : ''}</span></div><span className="source-indexed"><Check size={12} />Indexed locally</span><ArrowUpRight size={15} /></button>)}</section>)}</div>{!documents.length && <Empty title="Choose what Buddy can know">Add a file or select a folder snapshot. Only readable text is indexed, locally.</Empty>}<div className="knowledge-privacy"><ShieldCheck size={22} strokeWidth={1.3} /><div><h3>You choose the context.</h3><p>Files are read only after you select them. Removing a source deletes its index. Original files are never edited. Reimport a folder to update its snapshot.</p></div></div></div>}
+    {page === 'knowledge' && <div className="collection knowledge page-enter"><div className="eyebrow">CONTEXT BEYOND THE CONVERSATION</div><div className="knowledge-heading"><div><h1>Knowledge</h1><p className="collection-intro">Add the documents Buddy can search. Every answer starts with a source.</p></div><span className="knowledge-symbol"><BookOpen size={50} strokeWidth={0.8} /></span></div><div className="knowledge-actions"><button className="button primary" disabled={busy} onClick={() => fileInput.current?.click()}><Plus size={16} />Add files</button><button className="button secondary desktop-folder-import" disabled={busy} onClick={() => chooseFolder()}><FolderOpen size={16} />Add folder snapshot</button><button className="text-button" onClick={() => audioInput.current?.click()}><Upload size={15} />Import audio</button></div><p className="field-help">PDF, DOCX, XLSX, CSV, TXT, Markdown · 20 MB per document · Selected files only · No background disk access</p>{importStatus && (!settings.focusMode||busy) && <p className="import-status" role="status">{busy ? <span className="status-dot" /> : <Check size={13} />}{importStatus}</p>}<div className="source-groups">{[...new Set(documents.map(d => d.group))].map(group => <section key={group}><header><h2><FolderOpen size={15} />{group}<span>{documents.filter(d => d.group === group).length} files</span></h2>{group.startsWith('Folder: ') && <button className="text-button subtle desktop-folder-import" disabled={busy} onClick={() => chooseFolder(group)}>Refresh folder</button>}<button className="text-button subtle" disabled={busy} onClick={() => void revoke(group)}><Trash2 size={13} />Remove source</button></header>{documents.filter(d => d.group === group).map(doc => <button className="source-row" key={doc.id} onClick={() => setSelection({ citation: { kind: 'document', id: doc.chunks[0].id, label: doc.name, chunk: doc.chunks[0] } })}><span className={`file-type file-${doc.type}`}>{doc.type.toUpperCase()}</span><div><strong>{doc.name}</strong><span>{doc.chunks.length} indexed excerpts · {Math.max(1, Math.round(doc.size / 1024))} KB{doc.demo ? ' · Fictional demo fixture' : ''}</span></div><span className="source-indexed"><Check size={12} />Indexed locally</span><ArrowUpRight size={15} /></button>)}</section>)}</div>{!documents.length && <Empty title="Choose what Buddy can know">Add a file or select a folder snapshot. Only readable text is indexed, locally.</Empty>}<div className="knowledge-privacy"><ShieldCheck size={22} strokeWidth={1.3} /><div><h3>You choose the context.</h3><p>Files are read only after you select them. Removing a source deletes its index. Original files are never edited. Choose Refresh folder on the snapshot you want to update.</p></div></div></div>}
     </main>
     {audioUrl && <div className="audio-preview"><span><AudioLines size={15} />{audioName}<small>Local playback · no transcript generated</small></span><audio controls src={audioUrl} aria-label={audioName} /><IconButton label="Download audio" onClick={() => audioBlob && downloadFile(audioBlob, audioBlob.type.includes('mp4') ? 'buddy-recording.m4a' : 'buddy-recording.webm')}><ArrowDownToLine size={16} /></IconButton><IconButton label="Discard audio preview" onClick={() => { setAudioUrl(''); setAudioBlob(undefined); }}><X size={16} /></IconButton></div>}
     <PhoneNavigation page={page} onNavigate={navigate} onSettings={()=>setModal('settings')}/>
