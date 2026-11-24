@@ -312,6 +312,7 @@ export function App() {
     setInterimCaptions({});setStreamHealth({});
     const recordingSettings=recordingSettingsForPlatform({...settings,...(audioOnly?{localTranscription:false}:{})},isIOS(),!!targetId);
     let preparing=false;
+    let provisionalMeetingId: string | undefined;
     try {
       if(mode==='microphone'&&isNative()){let capabilities=await engine.capabilities(recordingSettings.speechModel);if((capabilities.platform==='ios'||(targetId&&capabilities.platform==='macos'))&&['not-determined','required'].includes(capabilities.audioPermissions?.microphone??'required')){await engine.requestAudioPermission('microphone');capabilities=await engine.capabilities(recordingSettings.speechModel);}if(attempt.controller.signal.aborted)return;const issue=recordingPermissionIssue(capabilities,recordingSettings);if(issue)throw new Error(issue);}
       if(mode==='microphone'&&isNative()&&recordingSettings.localTranscription&&recordingSettings.speechProvider!=='local'){const provider=recordingSettings.speechProvider,label=provider==='deepgram'?'Deepgram':'Groq';if(!(provider==='deepgram'?recordingSettings.deepgramAudioConsent:recordingSettings.groqAudioConsent))throw new Error(`Allow recording audio to ${label} before starting cloud transcription.`);if(!await invoke<boolean>(`has_${provider}_key`))throw new Error(`Save a ${label} API key before starting cloud transcription.`);}
@@ -325,8 +326,11 @@ export function App() {
       if(mode==='microphone'){
         startingCapture.current=true;
         if(isNative()){
-          m.status='interrupted';persist(m);await storage.saveMeeting(m);await engineListener.current;
+          await engineListener.current;
           if(attempt.controller.signal.aborted)return;
+          if (!targetId) provisionalMeetingId = m.id;
+          m.status='interrupted';persist(m);await storage.saveMeeting(m);
+          if(attempt.controller.signal.aborted)throw new DOMException('Start cancelled','AbortError');
           const session=await engine.start(m.id,recordingSettings);engineSession.current=session.sessionId;activeNativeSession.current=session;
           Object.assign(m,mergeEngineSession(meetingRef.current.find(item=>item.id===m.id)??m,session));setEnginePhase('live');
         }else {browserCaptureId.current=m.id;try{await capture.current.start(settings.deviceId);}catch(error){browserCaptureId.current=null;throw error;}if(targetId)Object.assign(m,{...(meetingRef.current.find(note=>note.id===targetId)??m),kind:'note',mode,status:'live'});}
@@ -334,7 +338,23 @@ export function App() {
       startingCapture.current=false;persist(m);if(targetId){setInlineCaptureId(null);focusNoteEditor();}else openMeeting(m,undefined,mode==='manual');setModal(null);setNewTitle('');setConsent(false);
       if (mode !== 'manual') { setCaptureMeetingId(m.id); setShowAssistant(false); }
       if(activeNativeSession.current)enforceCloudAudioPermission(activeNativeSession.current,settingsRef.current);
-    } catch (e) {if(targetId&&!engineSession.current){const latest=meetingRef.current.find(note=>note.id===targetId);if(latest?.mode==='microphone'&&!latest.segments.length)persist({...latest,mode:'manual',status:'ready'});}if(!attempt.controller.signal.aborted){setPreparationFailed(preparing);setError(`${preparing?'Could not prepare local transcription':'Could not start recording'}: ${e instanceof Error?e.message:String(e)}`);} }
+    } catch (e) {
+      let cleanupError = '';
+      if (provisionalMeetingId) {
+        const id = provisionalMeetingId;
+        try {
+          // The native engine retains its latest session, including interrupted starts.
+          // Preserve the pre-start snapshot if the engine actually acquired this meeting.
+          const session = await engine.status();
+          const entry = meetingRef.current.find(item => item.id === id);
+          if (session?.meetingId !== id && entry && !entry.recording && !entry.segments.length) {
+            await storage.deleteMeeting(id);
+            meetingRef.current = meetingRef.current.filter(item => item.id !== id);
+            setMeetings(meetingRef.current);
+          }
+        } catch (reason) { cleanupError = ` Could not verify or remove the pending meeting: ${String(reason)}`; }
+      }
+      if(targetId&&!engineSession.current){const latest=meetingRef.current.find(note=>note.id===targetId);if(latest?.mode==='microphone'&&!latest.segments.length)persist({...latest,mode:'manual',status:'ready'});}if(!attempt.controller.signal.aborted){setPreparationFailed(preparing);setError(`${preparing?'Could not prepare local transcription':'Could not start recording'}: ${e instanceof Error?e.message:String(e)}${cleanupError}`);} }
     finally {startingCapture.current=false;if(prepareAttempt.current?.id===attempt.id){prepareAttempt.current=null;setPreparation(null);if(!speechCancellation.current)setBusy(false);} }
   };
   async function finishBrowserRecording(id:string){
