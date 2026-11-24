@@ -50,6 +50,11 @@ describe('meeting evidence and incremental updates', () => {
     expect(m.blocks.find(b => b.id === 'b2')?.html).toContain('My checked figures');
     expect(m.events.every(e => e.evidenceIds.every(id => m.segments.some(s => s.id === id)))).toBe(true);
   });
+  it('exports editor hard breaks between words as Markdown hard breaks', () => {
+    const meeting = createMeeting('Handoff', 'manual');
+    const edited = updateBlock(meeting, meeting.blocks[0].id, '<p>First<br>Second<br />Third</p>');
+    expect(toMarkdown(edited)).toContain('First  \nSecond  \nThird');
+  });
   it('exports evidence IDs, timestamps and demo disclosure', () => {
     const markdown = toMarkdown(demoMeeting);
     expect(markdown).toContain('DEMO MEETING'); expect(markdown).toContain('s6'); expect(markdown).toContain('11:26');
