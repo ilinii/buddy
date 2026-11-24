@@ -12,7 +12,7 @@ import {TextEffect} from '../components/ui/text-effect';
 import { CopyAction } from './AnimatedControls';
 
 export interface AssistantDraft { id:string; text:string; }
-export function Assistant({ meeting, settings, draft, onDraftApplied, onExplore, onCitation, onKnowledge, onClose, onSettings }: { meetings: Meeting[]; meeting: Meeting; settings: Settings; draft?:AssistantDraft; onDraftApplied(id:string):void; onExplore():void; onCitation(citation: Citation): void; onKnowledge(): void; onClose(): void; onSettings(): void }) {
+export function Assistant({ visible, meeting, settings, draft, onDraftApplied, onExplore, onCitation, onKnowledge, onClose, onSettings }: { visible: boolean; meetings: Meeting[]; meeting: Meeting; settings: Settings; draft?:AssistantDraft; onDraftApplied(id:string):void; onExplore():void; onCitation(citation: Citation): void; onKnowledge(): void; onClose(): void; onSettings(): void }) {
   const [input, setInput] = useState('');
   const inputElement=useRef<HTMLTextAreaElement>(null);
   useEffect(()=>{if(draft){setInput(draft.text);inputElement.current?.focus({preventScroll:true});onDraftApplied(draft.id);}},[draft?.id]);
@@ -25,6 +25,7 @@ export function Assistant({ meeting, settings, draft, onDraftApplied, onExplore,
   const abort = useRef<AbortController | undefined>(undefined);
   const scroll = useRef<HTMLDivElement>(null);
   useEffect(() => () => abort.current?.abort(), []);
+  useEffect(() => { if (!visible) abort.current?.abort(); }, [visible]);
   useEffect(() => {
     if (!abort.current) return;
     abort.current.abort(); abort.current = undefined;
@@ -32,7 +33,7 @@ export function Assistant({ meeting, settings, draft, onDraftApplied, onExplore,
     setError('Request cancelled because AI settings changed. Content already sent cannot be recalled.');
   }, [settings.provider, settings.cloudConsent, settings.nvidiaConsent, settings.voyageConsent,
     settings.cloudLibraryConsent, settings.model, settings.nvidiaModel]);
-  useEffect(() => { scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' }); }, [messages, busy]);
+  useEffect(() => { scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' }); }, [messages, busy, visible]);
   const ask = async (question: string) => {
     if (!question.trim() || busy) return;
     setInput(''); setError(''); setBusy(true);setProgress('Finding the relevant moments');setAiState('researching');
@@ -50,6 +51,7 @@ export function Assistant({ meeting, settings, draft, onDraftApplied, onExplore,
     finally{if(abort.current===controller){setBusy(false);abort.current=undefined;}}
 
   };
+  if (!visible) return null;
   return <aside className="assistant-panel" aria-label="Buddy assistant">
     <header className="assistant-header"><div className="assistant-identity"><Orb size="large" interactive onActivate={onExplore} active={!settings.reduceMotion&&!settings.focusMode} state={busy ? 'thinking' : meeting.status === 'live' ? 'listening' : 'idle'} /><span>Buddy<small role="status">{busy ? 'Searching your sources' : meeting.status === 'live' ? meeting.mode === 'demo' ? 'Following demo replay' : 'Microphone recording' : 'Ready when you are'}</small></span></div><div><IconButton label="Clear conversation" onClick={() => { abort.current?.abort(); setMessages([]); setError(''); }}><RotateCcw size={15} /></IconButton><IconButton label="Hide assistant" onClick={onClose}><X size={16} /></IconButton></div></header>
     <div className="assistant-scroll" ref={scroll}>
